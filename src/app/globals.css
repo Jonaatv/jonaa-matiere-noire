@@ -143,10 +143,41 @@ html[data-warp="on"] .etoiles-statiques {
     animation: indicateur-defilement 2.8s ease-in-out 3s 3;
   }
 
+  /*
+   * Espace profond de l'accueil (DeepSpace) : le plan proche avance lentement
+   * vers nous devant le plan lointain, fixe (parallaxe). Échelle et rotation
+   * seulement : composition GPU, aucun nouveau dessin. En veille (aucune
+   * interaction depuis un moment), la dérive se met en pause.
+   */
+  .espace-proche {
+    animation: plongee-proche 40s ease-in-out infinite alternate;
+  }
+
+  html[data-veille] .espace-proche {
+    animation-play-state: paused;
+  }
+
   /* Étoiles statiques masquées par le voyage : inutile de les faire scintiller. */
   html[data-warp="on"] .scintille {
     animation: none;
   }
+}
+
+@keyframes plongee-proche {
+  from {
+    transform: scale(1) rotate(0deg);
+  }
+  to {
+    transform: scale(1.14) rotate(1.5deg);
+  }
+}
+
+/*
+ * Plan lointain : le même ciel retourné et agrandi, immobile (l'animer
+ * provoquait des à-coups au défilement, mesurés processeur ralenti 4×).
+ */
+.espace-lointain {
+  transform: rotate(180deg) scale(1.3);
 }
 
 /* Départ à une opacité très faible, pas nulle : le titre compte tout de suite comme affiché. */

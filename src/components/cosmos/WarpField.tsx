@@ -1,13 +1,29 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { startWarp } from "./warp";
+import { startWarp, type WarpController } from "./warp";
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /**
- * Voyage dans l'espace au défilement (voir `warp.ts`).
+ * Vitesse de croisière de l'accueil (unités de profondeur par seconde) :
+ * une étoile lointaine met une dizaine de secondes à arriver jusqu'à nous.
+ * Les autres pages gardent un ciel qui ne bouge qu'au défilement.
+ */
+const HOME_CRUISE = 0.09;
+
+/**
+ * Mise en veille pour ménager la batterie : sans aucune interaction pendant
+ * ce délai, la croisière ralentit doucement jusqu'à l'arrêt (et la dérive de
+ * la nébuleuse se met en pause). Elle repart au moindre geste.
+ */
+const IDLE_DELAY_MS = 60_000;
+const ACTIVITY_EVENTS = ["pointermove", "pointerdown", "keydown", "scroll", "touchstart", "wheel"] as const;
+
+/**
+ * Voyage dans l'espace (voir `warp.ts`).
  *
  * Amélioration progressive : le ciel statique (`StarField`) reste affiché
  * sans JavaScript, pendant le chargement et si le visiteur a demandé de
@@ -16,6 +32,10 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
  */
 export function WarpField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const controllerRef = useRef<WarpController | null>(null);
+  const pathname = usePathname();
+  const cruise = pathname === "/" ? HOME_CRUISE : 0;
+  const cruiseRef = useRef(cruise);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -23,17 +43,17 @@ export function WarpField() {
 
     const root = document.documentElement;
     const reducedMotion = window.matchMedia(REDUCED_MOTION);
-    let stop: (() => void) | null = null;
 
     const update = () => {
       if (reducedMotion.matches) {
-        stop?.();
-        stop = null;
+        controllerRef.current?.stop();
+        controllerRef.current = null;
         delete root.dataset.warp;
-      } else if (!stop) {
-        stop = startWarp(canvas, () => {
+      } else if (!controllerRef.current) {
+        controllerRef.current = startWarp(canvas, () => {
           root.dataset.warp = "on";
         });
+        controllerRef.current.setCruise(cruiseRef.current);
       }
     };
 
@@ -43,10 +63,46 @@ export function WarpField() {
 
     return () => {
       reducedMotion.removeEventListener("change", update);
-      stop?.();
+      controllerRef.current?.stop();
+      controllerRef.current = null;
       delete root.dataset.warp;
     };
   }, []);
+
+  // Croisière selon la page (y compris lors d'une navigation sans
+  // rechargement), avec mise en veille après une période sans interaction.
+  useEffect(() => {
+    const root = document.documentElement;
+    cruiseRef.current = cruise;
+    controllerRef.current?.setCruise(cruise);
+    if (cruise === 0) return;
+
+    let timer = 0;
+    let asleep = false;
+    const sleep = () => {
+      asleep = true;
+      root.dataset.veille = "";
+      cruiseRef.current = 0;
+      controllerRef.current?.setCruise(0);
+    };
+    const wake = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(sleep, IDLE_DELAY_MS);
+      if (!asleep) return;
+      asleep = false;
+      delete root.dataset.veille;
+      cruiseRef.current = cruise;
+      controllerRef.current?.setCruise(cruise);
+    };
+
+    wake();
+    for (const type of ACTIVITY_EVENTS) window.addEventListener(type, wake, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, wake);
+      delete root.dataset.veille;
+    };
+  }, [cruise]);
 
   return (
     <canvas

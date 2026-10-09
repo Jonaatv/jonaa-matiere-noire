@@ -27,10 +27,15 @@ const ALPHA_LEVELS = 6;
 /** Inertie du mouvement après le défilement (secondes). */
 const SMOOTHING = 0.12;
 /** Longueur maximale des traînées, en unités de profondeur. */
-const MAX_STREAK = 0.09;
+const MAX_STREAK = 0.1;
 /** Opacité des traînées, relative à celle de l'étoile. */
 const STREAK_ALPHA = 0.45;
-const STREAK_FACTOR = 0.05;
+/** Longueur des traînées selon la vitesse : visibles dès la vitesse de croisière. */
+const STREAK_FACTOR = 0.3;
+/** Montée en vitesse de la croisière au chargement (secondes) : une accélération douce. */
+const CRUISE_RAMP = 2.5;
+/** Pas plus de 60 images par seconde, même sur un écran 120 Hz (batterie). */
+const MIN_FRAME_MS = 1000 / 62;
 /** Précision de la table de vitesse (échantillons sur toute la page). */
 const SAMPLES = 400;
 
@@ -64,9 +69,9 @@ function createStars(count: number): Star[] {
   }));
 }
 
-/** Nombre d'étoiles selon la surface de l'écran : ~260 sur mobile, 500 au maximum. */
+/** Nombre d'étoiles selon la surface de l'écran : ~380 sur mobile, 900 au maximum. */
 function starCountFor(width: number, height: number) {
-  return Math.round(Math.min(500, Math.max(260, (width * height) / 2400)));
+  return Math.round(Math.min(900, Math.max(380, (width * height) / 1500)));
 }
 
 /**
@@ -177,13 +182,22 @@ function draw(
   context.globalAlpha = 1;
 }
 
+export type WarpController = {
+  /**
+   * Vitesse de croisière continue, en unités de profondeur par seconde
+   * (0 = le ciel ne bouge qu'au défilement).
+   */
+  setCruise: (speed: number) => void;
+  stop: () => void;
+};
+
 /**
- * Lance l'animation sur le canvas. Renvoie la fonction d'arrêt.
+ * Lance l'animation sur le canvas et renvoie de quoi la piloter.
  * `onReady` est appelé après la première image, pour le fondu d'apparition.
  */
-export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): () => void {
+export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): WarpController {
   const context = canvas.getContext("2d");
-  if (!context) return () => {};
+  if (!context) return { setCruise: () => {}, stop: () => {} };
   const ctx: CanvasRenderingContext2D = context;
 
   let width = 0;
@@ -195,6 +209,10 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): () =>
   let target = 0;
   let frame = 0;
   let lastTime = 0;
+  // Croisière : distance parcourue en continu, en plus de celle liée au défilement.
+  let cruiseTarget = 0;
+  let cruiseSpeed = 0;
+  let cruiseDistance = 0;
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -209,7 +227,7 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): () =>
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     const count = starCountFor(width, height);
     if (stars.length !== count) stars = createStars(count);
-    draw(ctx, stars, width, height, travel, 0);
+    draw(ctx, stars, width, height, travel + cruiseDistance, 0);
   }
 
   function measure() {
@@ -230,18 +248,43 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): () =>
     frame = requestAnimationFrame(tick);
   }
 
+  /** Croisière plus lente en bas de page : on termine sur un ciel calme. */
+  function cruiseFactor() {
+    const progress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+    return 1 - 0.65 * smoothstep(0.75, 1, progress);
+  }
+
   function tick(now: number) {
     frame = 0;
+    // Limite à ~60 images par seconde : on attend l'image suivante sans dessiner.
+    if (now - lastTime < MIN_FRAME_MS) {
+      frame = requestAnimationFrame(tick);
+      return;
+    }
+    // Plafond de 50 ms : au retour d'un onglet caché, pas de saut.
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
-    const previous = travel;
+
+    const previous = travel + cruiseDistance;
     travel += (target - travel) * (1 - Math.exp(-dt / SMOOTHING));
     const settled = Math.abs(target - travel) < 1e-5;
     if (settled) travel = target;
-    // Dernière image sans traînée : à l'arrêt, plus aucun calcul.
-    const velocity = settled || dt === 0 ? 0 : (travel - previous) / dt;
-    draw(ctx, stars, width, height, travel, velocity);
-    if (!settled) frame = requestAnimationFrame(tick);
+
+    const desired = cruiseTarget * cruiseFactor();
+    cruiseSpeed += (desired - cruiseSpeed) * (1 - Math.exp(-dt / (CRUISE_RAMP / 3)));
+    if (cruiseTarget === 0 && cruiseSpeed < 1e-4) cruiseSpeed = 0;
+    // Modulo : la position reste bornée, le champ d'étoiles se répète à l'infini.
+    cruiseDistance = (cruiseDistance + cruiseSpeed * dt) % DEPTH;
+
+    const position = travel + cruiseDistance;
+    const moving = !settled || cruiseSpeed > 0;
+    // Différence modulo DEPTH : le bouclage de la croisière ne crée pas de pic de vitesse.
+    const delta = position - previous;
+    const step = delta - DEPTH * Math.round(delta / DEPTH);
+    // Dernière image sans traînée : à l'arrêt complet, plus aucun calcul.
+    const velocity = moving && dt > 0 ? step / dt : 0;
+    draw(ctx, stars, width, height, position, velocity);
+    if (moving) frame = requestAnimationFrame(tick);
   }
 
   function onScroll() {
@@ -257,7 +300,7 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): () =>
   resize();
   measure();
   travel = target;
-  draw(ctx, stars, width, height, travel, 0);
+  draw(ctx, stars, width, height, travel + cruiseDistance, 0);
   onReady();
 
   canvasObserver.observe(canvas);
@@ -265,13 +308,19 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): () =>
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", measure, { passive: true });
 
-  return () => {
-    cancelAnimationFrame(frame);
-    frame = 0;
-    canvasObserver.disconnect();
-    pageObserver.disconnect();
-    window.removeEventListener("scroll", onScroll);
-    window.removeEventListener("resize", measure);
-    ctx.clearRect(0, 0, width, height);
+  return {
+    setCruise(speed: number) {
+      cruiseTarget = Math.max(0, speed);
+      schedule();
+    },
+    stop() {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      canvasObserver.disconnect();
+      pageObserver.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", measure);
+      ctx.clearRect(0, 0, width, height);
+    },
   };
 }

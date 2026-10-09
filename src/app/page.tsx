@@ -1,3 +1,4 @@
+import { DeepSpace } from "@/components/cosmos/DeepSpace";
 import { ClipsSection } from "@/components/home/ClipsSection";
 import { FollowSection } from "@/components/home/FollowSection";
 import { Hero } from "@/components/home/Hero";
@@ -11,6 +12,8 @@ import { ReleaseSection } from "@/components/home/ReleaseSection";
 export default function HomePage() {
   return (
     <>
+      {/* Fond de l'accueil uniquement : nébuleuse en profondeur (les autres pages gardent leur fond). */}
+      <DeepSpace />
       <Hero />
       <ListenSection />
       <ReleaseSection />
