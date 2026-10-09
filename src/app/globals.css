@@ -53,11 +53,44 @@
   }
 }
 
+/*
+ * Hauteur de l'en-tête sur mobile (py-4 + lien de 44 px) : le premier écran
+ * occupe exactement le reste de l'écran. À ajuster si l'en-tête change.
+ */
+:root {
+  --hauteur-entete-mobile: 4.75rem;
+}
+
 /* Ciel étoilé : halo bleu nuit discret en haut de page, derrière tout le contenu. */
 .ciel {
   background-image:
     radial-gradient(ellipse 75% 45% at 75% 0%, rgb(37 59 133 / 0.2), transparent 70%),
     radial-gradient(ellipse 60% 40% at 0% 100%, rgb(8 13 36 / 0.85), transparent 70%);
+}
+
+/*
+ * Nébuleuse : nappes de dégradés bleu nuit, concentrées derrière le titre.
+ * Immobile : dessinée une fois, elle ne coûte plus rien ensuite (une dérive
+ * continue obligerait le navigateur à produire des images même à l'arrêt).
+ */
+.nebuleuse {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 42% 22% at 32% 22%, rgb(37 59 133 / 0.24), transparent 70%),
+    radial-gradient(ellipse 30% 16% at 72% 16%, rgb(157 184 255 / 0.05), transparent 70%),
+    radial-gradient(ellipse 55% 24% at 60% 32%, rgb(8 13 36 / 0.9), transparent 70%),
+    radial-gradient(ellipse 38% 18% at 18% 44%, rgb(37 59 133 / 0.12), transparent 70%);
+}
+
+/*
+ * Grain de film : tuile de bruit SVG (feTurbulence) rendue une seule fois et
+ * répétée. Immobile, sans mode de fusion : aucun coût pendant le défilement.
+ */
+.grain {
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
 }
 
 /*
@@ -89,6 +122,65 @@ html[data-warp="on"] .etoiles-statiques {
 
   .scintille {
     animation: scintille 6s ease-in-out infinite alternate;
+  }
+
+  /*
+   * Fondu cinématographique du premier écran. Le contenu est visible par
+   * défaut : l'animation n'est ajoutée que si le visiteur accepte les
+   * animations, donc rien n'est masqué si le CSS ou l'animation échoue.
+   */
+  .apparition {
+    animation: apparition 1.6s cubic-bezier(0.2, 0.6, 0.2, 1) var(--delai, 0s) both;
+  }
+
+  .apparition-titre {
+    /* Montée progressive (lente au départ) : un vrai fondu de cinéma. */
+    animation: apparition-titre 2.8s cubic-bezier(0.45, 0, 0.25, 1) var(--delai, 0s) both;
+  }
+
+  /* Trois pulsations puis arrêt : aucune animation ne tourne en continu à l'arrêt. */
+  .indicateur-defilement {
+    animation: indicateur-defilement 2.8s ease-in-out 3s 3;
+  }
+
+  /* Étoiles statiques masquées par le voyage : inutile de les faire scintiller. */
+  html[data-warp="on"] .scintille {
+    animation: none;
+  }
+}
+
+/* Départ à une opacité très faible, pas nulle : le titre compte tout de suite comme affiché. */
+@keyframes apparition {
+  from {
+    opacity: 0.02;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes apparition-titre {
+  from {
+    opacity: 0.02;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes indicateur-defilement {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate3d(0, 6px, 0);
+    opacity: 1;
   }
 }
 
