@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <section className="flex flex-1 flex-col items-center justify-center px-4 py-24 text-center">
-      <h1 className="text-3xl font-semibold tracking-[0.1em]">Page introuvable</h1>
+      <h1 className="font-display text-5xl font-light">Page introuvable</h1>
       <p className="mt-4 text-star/70">Cette page s’est perdue dans le vide.</p>
       <Link
         href="/"

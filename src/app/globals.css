@@ -11,11 +11,17 @@
   --color-cosmic: #253b85; /* Bleu cosmique — décor et bordures (contraste trop faible pour du texte) */
   --color-star: #f5f5f7; /* Blanc — texte principal */
   --color-glow: #9db8ff; /* Reflet bleu clair — accents lumineux discrets */
+}
 
-  /* Police système provisoire : la typographie définitive sera choisie à l'étape design. */
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+/*
+ * Typographies, chargées par `next/font` dans `layout.tsx` : les fichiers sont
+ * téléchargés au build et servis avec le site (compatible export statique).
+ * `inline` : les variables `--font-cormorant` / `--font-instrument` sont
+ * définies sur <html>, pas ici.
+ */
+@theme inline {
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-cormorant), Georgia, "Times New Roman", serif;
 }
 
 @layer base {
@@ -24,8 +30,11 @@
     background-color: var(--color-void);
   }
 
+  /*
+   * Pas de fond sur <body> : il masquerait le ciel étoilé (`-z-10`).
+   * Le noir est porté par <html>.
+   */
   body {
-    background-color: var(--color-void);
     color: var(--color-star);
     font-family: var(--font-sans);
     /* Empêche tout défilement horizontal involontaire. */
@@ -41,6 +50,54 @@
   ::selection {
     background-color: var(--color-cosmic);
     color: var(--color-star);
+  }
+}
+
+/* Ciel étoilé : halo bleu nuit discret en haut de page, derrière tout le contenu. */
+.ciel {
+  background-image:
+    radial-gradient(ellipse 75% 45% at 75% 0%, rgb(37 59 133 / 0.2), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgb(8 13 36 / 0.85), transparent 70%);
+}
+
+/*
+ * Voyage au défilement : le canvas apparaît en fondu et remplace les étoiles
+ * statiques une fois sa première image dessinée (`data-warp="on"`, posé par WarpField).
+ */
+.warp,
+.etoiles-statiques {
+  transition: opacity 0.8s ease;
+}
+
+.warp {
+  opacity: 0;
+}
+
+html[data-warp="on"] .warp {
+  opacity: 1;
+}
+
+html[data-warp="on"] .etoiles-statiques {
+  opacity: 0;
+}
+
+/* Quelques étoiles scintillent très lentement, seulement si le visiteur accepte les animations. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  .scintille {
+    animation: scintille 6s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes scintille {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 0.85;
   }
 }
 
