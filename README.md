@@ -61,3 +61,19 @@ public/                 # Fichiers servis tels quels (images, icônes)
   signalées comme telles.
 - **Aucune statistique fictive** : un clic vers une plateforme n’est jamais présenté comme une
   écoute.
+
+## Outil de design : 21st MCP (facultatif)
+
+Le fichier `.mcp.json` déclare le serveur [21st MCP](https://21st.dev/mcp) (catalogue de
+composants d’interface), ajouté avec la commande officielle
+`npx @21st-dev/cli@latest init --client claude --write`. `.claude/settings.json` l’approuve
+pour ce projet.
+
+- **Clé API** : à créer sur https://21st.dev/mcp, puis à enregistrer comme **secret réseau**
+  pour le domaine `21st.dev` dans les paramètres de l’environnement cloud (jamais dans le code).
+  La passerelle réseau ajoute la clé aux requêtes : elle n’est jamais visible dans le conteneur.
+  C’est pourquoi `.mcp.json` ne contient aucun en-tête `x-api-key` : un en-tête envoyé par le
+  client, même vide, empêcherait la passerelle d’ajouter la vraie clé.
+- **Réseau** : l’environnement doit autoriser le domaine `21st.dev`.
+- Vérification : `claude mcp get 21st`.
+- Le site n’en dépend pas : il se compile et fonctionne sans ce serveur.

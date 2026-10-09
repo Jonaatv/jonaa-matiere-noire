@@ -1,10 +1,27 @@
 import type { Metadata, Viewport } from "next";
+import { Cormorant_Garamond, Instrument_Sans } from "next/font/google";
 
+import { StarField } from "@/components/cosmos/StarField";
+import { WarpField } from "@/components/cosmos/WarpField";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { SkipLink } from "@/components/layout/SkipLink";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
+
+// Polices téléchargées au build et servies avec le site : aucune requête vers Google côté visiteur.
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["300", "400"],
+  display: "swap",
+  variable: "--font-cormorant",
+});
+
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-instrument",
+});
 
 export const metadata: Metadata = {
   ...(siteConfig.url ? { metadataBase: new URL(siteConfig.url) } : {}),
@@ -25,8 +42,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="fr" className="h-full antialiased">
+    <html
+      lang="fr"
+      className={`${cormorant.variable} ${instrumentSans.variable} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col">
+        <StarField />
+        <WarpField />
         <SkipLink />
         <Header />
         <main id="contenu" className="flex flex-1 flex-col">
