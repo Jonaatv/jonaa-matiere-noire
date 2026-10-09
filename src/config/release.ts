@@ -25,8 +25,10 @@ export type ListenLink = {
 
 export type Track = {
   title: string;
-  /** Mention complémentaire facultative (featuring, durée…). */
+  /** Mention complémentaire facultative (featuring, version…). */
   note?: string;
+  /** Durée facultative, telle qu'affichée (ex. « 3:12 »). */
+  duration?: string;
 };
 
 /** Clip officiel : lien vers la page de la vidéo sur la plateforme officielle. */
@@ -51,6 +53,8 @@ export type Release = {
   tracks: Track[];
   /** Court texte de présentation (facultatif). */
   description: string | null;
+  /** Crédits de l'EP (production, mix, mastering…), une ligne par crédit. */
+  credits: string[];
   clips: Clip[];
   socialLinks: SocialLink[];
 };
@@ -62,6 +66,7 @@ export const release: Release = {
   listenLinks: [],
   tracks: [],
   description: null,
+  credits: [],
   clips: [],
   socialLinks: [],
 };

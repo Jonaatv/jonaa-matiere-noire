@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
-import Image from "next/image";
+import Link from "next/link";
 
-import { Placeholder, PlaceholderPill } from "@/components/ui/Placeholder";
+import { CoverArt } from "@/components/release/CoverArt";
+import { PlaceholderPill } from "@/components/ui/Placeholder";
 import { formatReleaseDate, release } from "@/config/release";
 import { siteConfig } from "@/config/site";
 
@@ -16,7 +17,7 @@ const delay = (seconds: number) => ({ "--delai": `${seconds}s` }) as CSSProperti
  * deux boutons côte à côte sous le titre.
  */
 export function Hero() {
-  const { cover, releaseDate } = release;
+  const { releaseDate } = release;
 
   return (
     <section
@@ -77,30 +78,11 @@ export function Hero() {
         </div>
       </div>
 
-      <figure className="flex flex-col gap-4 lg:col-span-5 lg:gap-5">
-        {cover ? (
-          // Pochette officielle affichée telle quelle : aucun élément superposé.
-          <Image
-            src={cover.src}
-            alt={cover.alt}
-            width={cover.width}
-            height={cover.height}
-            loading="eager"
-            fetchPriority="high"
-            sizes="(min-width: 1024px) 40vw, 100vw"
-            className="h-auto w-full shadow-[0_40px_120px_rgb(37_59_133/0.28)]"
-          />
-        ) : (
-          <Placeholder
-            title="Pochette officielle"
-            description="Emplacement temporaire. Le fichier officiel sera affiché tel quel, sans retouche ni élément ajouté."
-            className="aspect-square items-center justify-center text-center shadow-[0_40px_120px_rgb(37_59_133/0.28)]"
-          />
-        )}
-        <figcaption className="text-[0.6875rem] tracking-[0.24em] text-star/60 uppercase sm:text-xs">
-          {siteConfig.artist} — {siteConfig.project}
-        </figcaption>
-      </figure>
+      <CoverArt
+        sizes="(min-width: 1024px) 40vw, 100vw"
+        priority
+        className="lg:col-span-5"
+      />
 
       {/* Sur mobile, « Découvrir l'EP » vient après la pochette. */}
       <div className="lg:hidden">
@@ -124,13 +106,14 @@ function ListenButton({ className = "" }: { className?: string }) {
   );
 }
 
+/** Mène à la page complète de l'EP. */
 function DiscoverButton({ className = "" }: { className?: string }) {
   return (
-    <a
-      href="#ep"
+    <Link
+      href="/ep"
       className={`${buttonBase} border border-star/35 font-medium hover:border-glow hover:text-glow ${className}`}
     >
       Découvrir l’EP
-    </a>
+    </Link>
   );
 }

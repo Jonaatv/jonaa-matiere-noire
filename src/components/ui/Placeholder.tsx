@@ -31,7 +31,7 @@ export function Placeholder({ title, description, tag, className = "" }: Placeho
 export function PlaceholderPill({ label, className = "" }: { label: string; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-dashed border-glow/40 bg-night/55 px-3.5 py-2 text-[0.6875rem] tracking-[0.18em] text-glow uppercase sm:text-xs ${className}`}
+      className={`inline-flex items-center rounded-full border border-dashed font-sans border-glow/40 bg-night/55 px-3.5 py-2 text-[0.6875rem] tracking-[0.18em] text-glow uppercase sm:text-xs ${className}`}
     >
       À fournir · {label}
     </span>
