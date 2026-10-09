@@ -61,3 +61,17 @@ public/                 # Fichiers servis tels quels (images, icônes)
   signalées comme telles.
 - **Aucune statistique fictive** : un clic vers une plateforme n’est jamais présenté comme une
   écoute.
+
+## Outil de design : 21st MCP (facultatif)
+
+Le fichier `.mcp.json` déclare le serveur [21st MCP](https://21st.dev/mcp) (catalogue de
+composants d’interface), ajouté avec la commande officielle
+`npx @21st-dev/cli@latest init --client claude --write`. `.claude/settings.json` l’approuve
+pour ce projet.
+
+- **Clé API** : à créer sur https://21st.dev/mcp, puis à fournir **uniquement** via la variable
+  d’environnement `API_KEY_21ST` (paramètres de l’environnement, jamais dans le code). Le fichier
+  `.mcp.json` ne contient que la référence `${API_KEY_21ST}`.
+- **Réseau** : l’environnement doit autoriser le domaine `21st.dev`.
+- Vérification : `claude mcp get 21st`.
+- Le site n’en dépend pas : il se compile et fonctionne sans ce serveur.
