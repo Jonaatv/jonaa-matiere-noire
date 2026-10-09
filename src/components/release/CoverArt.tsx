@@ -1,11 +1,9 @@
-import Image from "next/image";
-
 import { Placeholder } from "@/components/ui/Placeholder";
 import { release } from "@/config/release";
 import { siteConfig } from "@/config/site";
 
 type CoverArtProps = {
-  /** Tailles d'affichage de l'image, pour le chargement responsive. */
+  /** Largeur d'affichage selon l'écran (attribut `sizes`), pour choisir la bonne version. */
   sizes: string;
   /** Pochette visible dès le premier écran : chargée en priorité. */
   priority?: boolean;
@@ -13,9 +11,11 @@ type CoverArtProps = {
 };
 
 /**
- * Pochette de l'EP, ou son emplacement tant que la pochette définitive
- * n'existe pas. La pochette officielle est affichée telle quelle :
- * aucune retouche, aucun élément superposé.
+ * Pochette de l'EP, ou son emplacement tant qu'elle n'est pas renseignée.
+ *
+ * La pochette officielle est affichée telle quelle : aucune retouche, aucun
+ * élément superposé, aucun effet. Le navigateur choisit la version WebP
+ * adaptée à l'écran ; le PNG original sert de secours.
  */
 export function CoverArt({ sizes, priority = false, className = "" }: CoverArtProps) {
   const { cover } = release;
@@ -23,16 +23,27 @@ export function CoverArt({ sizes, priority = false, className = "" }: CoverArtPr
   return (
     <figure className={`flex flex-col gap-4 lg:gap-5 ${className}`}>
       {cover ? (
-        <Image
-          src={cover.src}
-          alt={cover.alt}
-          width={cover.width}
-          height={cover.height}
-          sizes={sizes}
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
-          className="h-auto w-full shadow-[0_40px_120px_rgb(37_59_133/0.28)]"
-        />
+        <picture>
+          <source
+            type="image/webp"
+            srcSet={cover.webp.map((version) => `${version.src} ${version.width}w`).join(", ")}
+            sizes={sizes}
+          />
+          {/*
+            <img> plutôt que next/image : en export statique, next/image ne
+            produit pas de variantes ; <picture> sert les WebP pré-générés.
+          */}
+          <img
+            src={cover.src}
+            alt={cover.alt}
+            width={cover.width}
+            height={cover.height}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding="async"
+            className="aspect-square h-auto w-full"
+          />
+        </picture>
       ) : (
         <Placeholder
           title="Pochette définitive"

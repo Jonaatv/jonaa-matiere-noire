@@ -8,12 +8,17 @@
 
 /** Pochette officielle, utilisée telle quelle (aucune retouche, aucun élément ajouté). */
 export type Cover = {
-  /** Chemin dans `public/`, ex. "/images/matiere-noire.jpg". */
+  /** PNG original dans `public/`, référence jamais modifiée (et image de secours). */
   src: string;
   /** Description de l'image pour les lecteurs d'écran. */
   alt: string;
   width: number;
   height: number;
+  /**
+   * Versions WebP allégées, générées depuis le PNG par `scripts/pochette-webp.py`
+   * (redimensionnement et compression uniquement, sans recadrage ni retouche).
+   */
+  webp: { src: string; width: number }[];
 };
 
 /** Lien officiel vers l'EP sur une plateforme d'écoute. */
@@ -61,7 +66,18 @@ export type Release = {
 
 export const release: Release = {
   format: "EP",
-  cover: null,
+  cover: {
+    src: "/images/matiere-noire-pochette.png",
+    // Proposition de texte alternatif, à valider.
+    alt: "Pochette de l’EP MATIÈRE NOIRE : un ciel nocturne presque noir, parsemé d’étoiles, traversé en diagonale par une traînée lumineuse de nuages cosmiques bleu-gris. En haut, le titre « MATIÈRE NOIRE » en capitales blanches espacées ; en bas, le logo « Parental Advisory – Explicit Content ».",
+    width: 1254,
+    height: 1254,
+    webp: [
+      { src: "/images/pochette/matiere-noire-480.webp", width: 480 },
+      { src: "/images/pochette/matiere-noire-800.webp", width: 800 },
+      { src: "/images/pochette/matiere-noire-1254.webp", width: 1254 },
+    ],
+  },
   releaseDate: null,
   listenLinks: [],
   tracks: [],
