@@ -50,12 +50,18 @@ src/
   config/
     site.ts             # Nom, titre, description, URL du site
 public/                 # Fichiers servis tels quels (images, icônes)
+scripts/                # Outils ponctuels (versions WebP de la pochette)
 ```
 
 ## Contenus officiels
 
-- **Pochette** : le fichier officiel MATIÈRE NOIRE (avec la mention Parental Advisory) sera placé
-  dans `public/images/`. Il est utilisé tel quel : aucune retouche, aucun élément ajouté.
+- **Pochette** : le fichier officiel MATIÈRE NOIRE (avec la mention Parental Advisory) est
+  `public/images/matiere-noire-pochette.png` (1254 × 1254 px). C'est la référence : il n'est
+  jamais modifié, et il est affiché tel quel, sans retouche, élément ajouté ni effet.
+  Le site sert des versions WebP allégées (`public/images/pochette/`), générées depuis ce PNG
+  par redimensionnement et compression uniquement. Après tout remplacement du PNG :
+  `python3 scripts/pochette-webp.py` (Python 3 + Pillow), puis mettre à jour
+  `src/config/release.ts`.
 - **Aucune donnée inventée** : titres, liens de streaming, clips et réseaux sociaux ne sont
   affichés qu’une fois fournis et vérifiés. Les données de démonstration sont explicitement
   signalées comme telles.

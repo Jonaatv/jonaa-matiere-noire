@@ -2,10 +2,12 @@ import Link from "next/link";
 
 import { siteConfig } from "@/config/site";
 
-/** Liens vers les sections de la page d'accueil (fonctionnent aussi depuis la page 404). */
+import { NavLink } from "./NavLink";
+
+/** Sections de l'accueil et page de l'EP (les liens fonctionnent depuis toutes les pages). */
 const navigation = [
   { href: "/#ecouter", label: "Écouter" },
-  { href: "/#ep", label: "L’EP" },
+  { href: "/ep", label: "L’EP" },
   { href: "/#clips", label: "Clips" },
   { href: "/#suivre", label: "Suivre" },
 ] as const;
@@ -24,12 +26,7 @@ export function Header() {
         <ul className="flex flex-wrap gap-x-4 text-[0.6875rem] tracking-[0.14em] uppercase sm:gap-x-8 lg:gap-x-12 lg:text-xs lg:tracking-[0.24em]">
           {navigation.map((item) => (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                className="inline-flex min-h-11 items-center text-star/75 transition-colors hover:text-glow"
-              >
-                {item.label}
-              </Link>
+              <NavLink href={item.href}>{item.label}</NavLink>
             </li>
           ))}
         </ul>

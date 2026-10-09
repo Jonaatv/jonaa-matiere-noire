@@ -3,7 +3,7 @@ import { PlaceholderPill } from "@/components/ui/Placeholder";
 import { release } from "@/config/release";
 import { siteConfig } from "@/config/site";
 
-import { Section } from "./Section";
+import { Section } from "@/components/ui/Section";
 
 /** Réseaux officiels de JONAA. */
 export function FollowSection() {
