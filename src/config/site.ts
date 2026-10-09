@@ -12,6 +12,11 @@ export const siteConfig = {
   title: "JONAA — MATIÈRE NOIRE",
   /** Description factuelle utilisée pour le référencement. */
   description: "Site officiel de JONAA et de son EP MATIÈRE NOIRE.",
+  /**
+   * Phrase d'accroche artistique affichée sous le titre.
+   * Non fournie pour l'instant : rien n'est affiché tant qu'elle vaut `null`.
+   */
+  tagline: null as string | null,
   locale: "fr_FR",
   /**
    * URL publique du site (ex. "https://www.exemple.fr").

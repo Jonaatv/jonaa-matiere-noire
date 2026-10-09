@@ -1,18 +1,22 @@
-import { siteConfig } from "@/config/site";
+import { Hero } from "@/components/sections/Hero";
+import { SectionFrame } from "@/components/sections/SectionFrame";
 
 /**
- * Page d'accueil — squelette technique.
- * Le premier écran immersif (étoiles, nébuleuses, pochette, boutons d'écoute)
- * sera construit à l'étape design, après validation.
+ * Page d'accueil.
+ * Les sections « Le projet » et « Écouter » sont des emplacements :
+ * leur contenu (présentation, liste des morceaux, liens d'écoute) sera
+ * ajouté aux étapes suivantes, à partir des informations officielles.
  */
 export default function HomePage() {
   return (
-    <section className="flex flex-1 flex-col items-center justify-center px-4 py-24 text-center">
-      <p className="text-sm tracking-[0.4em] text-glow uppercase">{siteConfig.artist}</p>
-      <h1 className="mt-4 text-4xl font-semibold tracking-[0.15em] sm:text-6xl">
-        {siteConfig.project}
-      </h1>
-      <p className="mt-8 text-sm text-star/70">Site en construction.</p>
-    </section>
+    <>
+      <Hero />
+      <SectionFrame id="projet" eyebrow="Le projet" title="Matière Noire">
+        <p>La présentation du projet sera publiée prochainement.</p>
+      </SectionFrame>
+      <SectionFrame id="ecouter" eyebrow="Écouter" title="Écouter l’EP">
+        <p>Les liens d’écoute officiels seront ajoutés dès leur publication.</p>
+      </SectionFrame>
+    </>
   );
 }

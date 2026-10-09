@@ -41,16 +41,30 @@ utilisées.
 ```
 src/
   app/                  # Pages (chaque dossier = une URL)
-    layout.tsx          # Gabarit commun : métadonnées, en-tête, pied de page
+    layout.tsx          # Gabarit commun : métadonnées, décor, en-tête, pied de page
     page.tsx            # Page d’accueil
     not-found.tsx       # Page 404
-    globals.css         # Palette de couleurs et styles de base
+    fonts.ts            # Chargement des polices
+    globals.css         # Palette, décor cosmique, animations
   components/
+    cosmos/             # Décor spatial : ciel, nébuleuses, champ d’étoiles (canvas)
     layout/             # En-tête, pied de page, lien d’accès au contenu
+    sections/           # Premier écran et sections de la page
+    ui/                 # Éléments réutilisables (boutons)
   config/
-    site.ts             # Nom, titre, description, URL du site
+    site.ts             # Nom, titre, description, accroche, URL du site
+  fonts/                # Fichiers de polices et leurs licences
 public/                 # Fichiers servis tels quels (images, icônes)
 ```
+
+## Identité visuelle
+
+- **Palette** : définie dans `src/app/globals.css` (`void`, `night`, `cosmic`, `star`, `glow`).
+- **Polices** : Cormorant Garamond (titres) et Manrope (texte), sous licence SIL Open Font
+  License, hébergées dans `src/fonts/` : aucun appel à Google Fonts.
+- **Décor** : ciel et nébuleuses en CSS, étoiles dessinées dans un `<canvas>`
+  (`src/components/cosmos/Starfield.tsx`). Moins d’étoiles sur petit écran, animation suspendue
+  quand l’onglet est masqué, image fixe si « réduire les animations » est activé.
 
 ## Contenus officiels
 
