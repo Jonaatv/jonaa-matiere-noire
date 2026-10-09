@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+/*
+ * Palette MATIÈRE NOIRE.
+ * Chaque couleur déclarée ici devient utilisable en classe Tailwind :
+ * `bg-void`, `text-star`, `border-cosmic`, etc.
+ */
+@theme {
+  --color-void: #050508; /* Noir profond — fond principal */
+  --color-night: #080d24; /* Bleu nuit — fonds secondaires */
+  --color-cosmic: #253b85; /* Bleu cosmique — décor et bordures (contraste trop faible pour du texte) */
+  --color-star: #f5f5f7; /* Blanc — texte principal */
+  --color-glow: #9db8ff; /* Reflet bleu clair — accents lumineux discrets */
+
+  /* Police système provisoire : la typographie définitive sera choisie à l'étape design. */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-void);
+  }
+
+  body {
+    background-color: var(--color-void);
+    color: var(--color-star);
+    font-family: var(--font-sans);
+    /* Empêche tout défilement horizontal involontaire. */
+    overflow-x: clip;
+  }
+
+  /* Contour de focus bien visible pour la navigation au clavier. */
+  :focus-visible {
+    outline: 2px solid var(--color-glow);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--color-cosmic);
+    color: var(--color-star);
+  }
+}
+
+/* Respecte la préférence système « réduire les animations ». */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
