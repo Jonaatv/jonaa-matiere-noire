@@ -69,9 +69,11 @@ composants d’interface), ajouté avec la commande officielle
 `npx @21st-dev/cli@latest init --client claude --write`. `.claude/settings.json` l’approuve
 pour ce projet.
 
-- **Clé API** : à créer sur https://21st.dev/mcp, puis à fournir **uniquement** via la variable
-  d’environnement `API_KEY_21ST` (paramètres de l’environnement, jamais dans le code). Le fichier
-  `.mcp.json` ne contient que la référence `${API_KEY_21ST}`.
+- **Clé API** : à créer sur https://21st.dev/mcp, puis à enregistrer comme **secret réseau**
+  pour le domaine `21st.dev` dans les paramètres de l’environnement cloud (jamais dans le code).
+  La passerelle réseau ajoute la clé aux requêtes : elle n’est jamais visible dans le conteneur.
+  C’est pourquoi `.mcp.json` ne contient aucun en-tête `x-api-key` : un en-tête envoyé par le
+  client, même vide, empêcherait la passerelle d’ajouter la vraie clé.
 - **Réseau** : l’environnement doit autoriser le domaine `21st.dev`.
 - Vérification : `claude mcp get 21st`.
 - Le site n’en dépend pas : il se compile et fonctionne sans ce serveur.
