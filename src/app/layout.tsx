@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Instrument_Sans } from "next/font/google";
 
+import { FilmGrain, Nebula } from "@/components/cosmos/Nebula";
 import { StarField } from "@/components/cosmos/StarField";
 import { WarpField } from "@/components/cosmos/WarpField";
 import { Footer } from "@/components/layout/Footer";
@@ -47,8 +48,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${cormorant.variable} ${instrumentSans.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        {/* Fond, du plus lointain au plus proche ; tout reste derrière le contenu. */}
         <StarField />
+        <Nebula />
         <WarpField />
+        <FilmGrain />
         <SkipLink />
         <Header />
         <main id="contenu" className="flex flex-1 flex-col">
