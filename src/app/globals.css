@@ -235,6 +235,166 @@ html[data-warp="on"] .etoiles-statiques {
   }
 }
 
+/*
+ * Constellation (page /constellation, prototype).
+ * Tout est dessiné une fois ; seules l'opacité et la position des calques
+ * s'animent (composition GPU). Animations lentes, absentes si le visiteur a
+ * demandé de réduire les animations, figées par le bouton pause.
+ */
+.fond-constellation {
+  background-image:
+    radial-gradient(ellipse 55% 45% at 68% 48%, rgb(37 59 133 / 0.32), transparent 72%),
+    radial-gradient(ellipse 35% 30% at 58% 52%, rgb(157 184 255 / 0.06), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 15% 100%, rgb(8 13 36 / 0.95), transparent 70%);
+}
+
+/* Sur mobile, le ciel occupe toute la largeur : halo recentré sous lui. */
+@media (max-width: 1023px) {
+  .fond-constellation {
+    background-image:
+      radial-gradient(ellipse 90% 40% at 50% 58%, rgb(37 59 133 / 0.32), transparent 72%),
+      radial-gradient(ellipse 60% 25% at 50% 58%, rgb(157 184 255 / 0.05), transparent 70%);
+  }
+}
+
+/* Vignette : le ciel se fond dans le noir sur ses bords. */
+.ciel-constellation {
+  mask-image: radial-gradient(circle at 50% 50%, #000 72%, transparent 100%);
+}
+
+.trait-constellation {
+  stroke: var(--color-glow);
+  stroke-opacity: 0.22;
+  stroke-width: 1;
+  stroke-linecap: round;
+  transition: stroke-opacity 0.8s ease;
+}
+
+.trait-constellation[data-actif] {
+  stroke-opacity: 0.6;
+}
+
+/* Étoile : cœur lumineux, halo diffus, anneau de sélection. */
+.etoile-constellation {
+  --taille: 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.etoile-constellation[data-eclat="1"] {
+  --taille: 3.5px;
+}
+
+.etoile-constellation[data-eclat="3"] {
+  --taille: 7px;
+}
+
+.etoile-coeur,
+.etoile-halo,
+.etoile-anneau {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.etoile-coeur {
+  width: var(--taille);
+  height: var(--taille);
+  background: var(--color-star);
+  box-shadow:
+    0 0 6px 1px rgb(157 184 255 / 0.65),
+    0 0 16px 3px rgb(37 59 133 / 0.55);
+  transition: transform 0.6s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+
+.etoile-halo {
+  inset: -2px;
+  background: radial-gradient(circle, rgb(157 184 255 / 0.32), transparent 65%);
+  opacity: 0.55;
+  transition: opacity 0.6s ease;
+}
+
+.etoile-anneau {
+  inset: 4px;
+  border: 1px solid rgb(157 184 255 / 0.55);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+
+.etoile-constellation:hover .etoile-halo,
+.etoile-constellation:focus-visible .etoile-halo {
+  opacity: 1;
+}
+
+.etoile-constellation[aria-pressed="true"] .etoile-coeur {
+  transform: scale(1.5);
+}
+
+.etoile-constellation[aria-pressed="true"] .etoile-halo {
+  opacity: 1;
+}
+
+.etoile-constellation[aria-pressed="true"] .etoile-anneau {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Les lignes apparaissent une à une, à l'arrivée sur la page. */
+  .trait-constellation {
+    animation: trace-constellation 2.4s ease-out both;
+  }
+
+  /* Respiration très lente des étoiles (opacité du halo seulement). */
+  .etoile-constellation .etoile-halo {
+    animation: respiration-etoile 9s ease-in-out infinite alternate;
+    animation-delay: inherit;
+  }
+
+  /* Dérive imperceptible de tout le ciel. */
+  .constellation-derive {
+    animation: derive-constellation 60s ease-in-out infinite alternate;
+  }
+
+  /* Apparition du panneau d'une étoile. */
+  .revele {
+    animation: apparition 0.7s cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+
+  html[data-pause] .trait-constellation,
+  html[data-pause] .etoile-halo,
+  html[data-pause] .constellation-derive {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes trace-constellation {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes respiration-etoile {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+@keyframes derive-constellation {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(-1%, 0.8%, 0) rotate(0.8deg);
+  }
+}
+
 /* Respecte la préférence système « réduire les animations ». */
 @media (prefers-reduced-motion: reduce) {
   *,
