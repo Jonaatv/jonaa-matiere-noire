@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { HomeLink } from "@/components/layout/HomeLink";
 import { CosmicPortal } from "@/components/portail/CosmicPortal";
 import { siteConfig } from "@/config/site";
 
@@ -20,12 +21,15 @@ export const metadata: Metadata = {
 export default function PortailPage() {
   return (
     <section aria-labelledby="titre-portail" className="relative flex flex-col">
-      <h1
-        id="titre-portail"
-        className="pointer-events-none absolute top-1 left-5 z-10 text-xs tracking-[0.46em] text-glow uppercase sm:left-10 lg:left-24"
-      >
-        Portail cosmique
-      </h1>
+      <div className="absolute top-0 left-5 z-10 flex flex-col sm:left-10 lg:left-24">
+        <HomeLink />
+        <h1
+          id="titre-portail"
+          className="pointer-events-none text-xs tracking-[0.46em] text-glow uppercase"
+        >
+          Portail cosmique
+        </h1>
+      </div>
 
       {/*
         Hauteur de l'écran sous l'en-tête, moins une bande en bas : on peut

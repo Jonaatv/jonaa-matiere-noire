@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 
 import { Constellation } from "@/components/constellation/Constellation";
+import { HomeLink } from "@/components/layout/HomeLink";
 import { siteConfig } from "@/config/site";
 
 /** Délai de l'apparition en fondu (voir `.apparition` dans globals.css). */
@@ -33,6 +34,7 @@ export default function ConstellationPage() {
         className="grid flex-1 grid-cols-1 content-start gap-8 px-5 pt-4 pb-24 sm:px-10 lg:grid-cols-12 lg:content-center lg:gap-x-16 lg:gap-y-10 lg:px-24 lg:pt-8"
       >
         <div className="flex flex-col gap-4 lg:col-span-4 lg:row-start-1 lg:self-end lg:gap-6">
+          <HomeLink className="-mt-2" />
           <p className="apparition text-xs tracking-[0.46em] text-glow uppercase" style={delay(0)}>
             {siteConfig.artist} · Prototype
           </p>

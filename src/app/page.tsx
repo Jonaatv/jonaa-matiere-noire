@@ -1,5 +1,6 @@
 import { DeepSpace } from "@/components/cosmos/DeepSpace";
 import { ClipsSection } from "@/components/home/ClipsSection";
+import { ExploreSection } from "@/components/home/ExploreSection";
 import { FollowSection } from "@/components/home/FollowSection";
 import { Hero } from "@/components/home/Hero";
 import { ListenSection } from "@/components/home/ListenSection";
@@ -17,6 +18,7 @@ export default function HomePage() {
       <Hero />
       <ListenSection />
       <ReleaseSection />
+      <ExploreSection />
       <ClipsSection />
       <FollowSection />
     </>
