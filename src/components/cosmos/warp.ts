@@ -69,9 +69,12 @@ function createStars(count: number): Star[] {
   }));
 }
 
-/** Nombre d'étoiles selon la surface de l'écran : ~380 sur mobile, 900 au maximum. */
+/**
+ * Nombre d'étoiles selon la surface de l'écran : 260 sur un téléphone (coût
+ * réduit), jusqu'à 900 sur un grand écran.
+ */
 function starCountFor(width: number, height: number) {
-  return Math.round(Math.min(900, Math.max(380, (width * height) / 1500)));
+  return Math.round(Math.min(900, Math.max(260, (width * height) / 1500)));
 }
 
 /**
@@ -188,6 +191,8 @@ export type WarpController = {
    * (0 = le ciel ne bouge qu'au défilement).
    */
   setCruise: (speed: number) => void;
+  /** Pause demandée par le visiteur : le ciel se fige, plus aucun calcul. */
+  setPaused: (paused: boolean) => void;
   stop: () => void;
 };
 
@@ -197,7 +202,7 @@ export type WarpController = {
  */
 export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): WarpController {
   const context = canvas.getContext("2d");
-  if (!context) return { setCruise: () => {}, stop: () => {} };
+  if (!context) return { setCruise: () => {}, setPaused: () => {}, stop: () => {} };
   const ctx: CanvasRenderingContext2D = context;
 
   let width = 0;
@@ -213,13 +218,16 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): WarpC
   let cruiseTarget = 0;
   let cruiseSpeed = 0;
   let cruiseDistance = 0;
+  let paused = false;
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    // Résolution limitée à 1,5× : le coût du dessin suit le nombre de pixels, et
-    // pour des points d'un ou deux pixels la différence avec 2× ou 3× est invisible.
-    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+    // Résolution limitée : le coût du dessin suit le nombre de pixels, et pour
+    // des points d'un ou deux pixels la différence avec 2× ou 3× est invisible.
+    // Sur téléphone (écran étroit), 1,25× suffit et allège encore le dessin.
+    const maxRatio = rect.width < 768 ? 1.25 : 1.5;
+    const ratio = Math.min(window.devicePixelRatio || 1, maxRatio);
     width = rect.width;
     height = rect.height;
     canvas.width = Math.round(width * ratio);
@@ -243,7 +251,7 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): WarpC
   }
 
   function schedule() {
-    if (frame) return;
+    if (frame || paused) return;
     lastTime = performance.now();
     frame = requestAnimationFrame(tick);
   }
@@ -312,6 +320,20 @@ export function startWarp(canvas: HTMLCanvasElement, onReady: () => void): WarpC
     setCruise(speed: number) {
       cruiseTarget = Math.max(0, speed);
       schedule();
+    },
+    setPaused(value: boolean) {
+      if (value === paused) return;
+      paused = value;
+      if (paused) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        // Image figée, sans traînée.
+        draw(ctx, stars, width, height, travel + cruiseDistance, 0);
+      } else {
+        // Reprise : la croisière réaccélère en douceur, le défilement rattrape sa position.
+        cruiseSpeed = 0;
+        schedule();
+      }
     },
     stop() {
       cancelAnimationFrame(frame);

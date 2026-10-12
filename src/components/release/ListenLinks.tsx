@@ -34,7 +34,7 @@ export function ListenLinks() {
       {/* Lecteur intégré : sera ajouté une fois la plateforme officielle connue, chargé au clic. */}
       <div className="flex flex-col gap-4 rounded-sm border border-cosmic/60 bg-night/70 p-7 sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:p-10">
         <div className="flex flex-col gap-2.5">
-          <p className="text-[0.6875rem] tracking-[0.28em] text-glow uppercase">
+          <p className="text-xs tracking-[0.28em] text-glow uppercase">
             Lecteur intégré officiel · à fournir
           </p>
           <p className="max-w-md text-sm leading-relaxed text-star/72 sm:text-[0.9375rem]">

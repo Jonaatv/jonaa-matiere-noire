@@ -9,6 +9,8 @@ export function ReleaseSection() {
     <Section
       id="ep"
       number="02"
+      // Le titre « Matière Noire » est déjà le nom du premier écran : nom distinct pour cette zone.
+      label="L’EP"
       eyebrow="L’EP"
       title={
         <>

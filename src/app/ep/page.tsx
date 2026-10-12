@@ -68,7 +68,7 @@ export default function EpPage() {
           )}
           {credits.length > 0 ? (
             <div className="flex flex-col gap-4">
-              <h3 className="text-[0.6875rem] tracking-[0.3em] text-glow uppercase">Crédits</h3>
+              <h3 className="text-xs tracking-[0.3em] text-glow uppercase">Crédits</h3>
               <ul className="flex flex-col gap-2 text-[0.9375rem] leading-relaxed text-star/75">
                 {credits.map((credit) => (
                   <li key={credit}>{credit}</li>

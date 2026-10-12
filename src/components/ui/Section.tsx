@@ -12,6 +12,11 @@ type SectionProps = {
   intro?: string;
   /** `split` : titre à gauche, contenu à droite sur grand écran. `center` : tout centré. */
   layout?: "split" | "center";
+  /**
+   * Nom de la zone pour les lecteurs d'écran, s'il doit différer du titre
+   * (deux zones d'une même page ne doivent pas porter le même nom).
+   */
+  label?: string;
   children: ReactNode;
 };
 
@@ -23,6 +28,7 @@ export function Section({
   title,
   intro,
   layout = "split",
+  label,
   children,
 }: SectionProps) {
   const titleId = `titre-${id}`;
@@ -31,7 +37,8 @@ export function Section({
   return (
     <section
       id={id}
-      aria-labelledby={titleId}
+      aria-labelledby={label ? undefined : titleId}
+      aria-label={label}
       className={
         centered
           ? "flex flex-col items-center gap-7 border-t border-cosmic/45 px-5 py-20 text-center sm:px-10 lg:px-24 lg:py-30"
@@ -39,7 +46,7 @@ export function Section({
       }
     >
       <header className={centered ? "flex flex-col items-center gap-6" : "flex flex-col gap-6 lg:col-span-4"}>
-        <p className="text-[0.6875rem] tracking-[0.38em] text-glow uppercase sm:text-xs">
+        <p className="text-xs tracking-[0.38em] text-glow uppercase">
           {number} — {eyebrow}
         </p>
         <h2

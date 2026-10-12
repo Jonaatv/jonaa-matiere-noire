@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+import { siteConfig } from "@/config/site";
+
+export const metadata: Metadata = {
+  title: `Page introuvable — ${siteConfig.artist}`,
+};
 
 export default function NotFound() {
   return (

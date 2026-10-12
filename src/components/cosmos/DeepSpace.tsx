@@ -31,6 +31,8 @@ function NebulaLayer({ className }: { className: string }) {
         width={1000}
         height={1000}
         decoding="async"
+        // Décor : ne passe jamais avant le titre ni la pochette.
+        fetchPriority="low"
         className={`absolute top-[-10%] left-[-10%] h-[120%] w-[120%] max-w-none object-cover ${className}`}
       />
     </picture>

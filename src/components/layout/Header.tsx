@@ -23,7 +23,7 @@ export function Header() {
         {siteConfig.artist}
       </Link>
       <nav aria-label="Navigation principale">
-        <ul className="flex flex-wrap gap-x-4 text-[0.6875rem] tracking-[0.14em] uppercase sm:gap-x-8 lg:gap-x-12 lg:text-xs lg:tracking-[0.24em]">
+        <ul className="flex flex-wrap gap-x-4 text-xs tracking-[0.12em] uppercase sm:gap-x-8 lg:gap-x-12 lg:text-xs lg:tracking-[0.24em]">
           {navigation.map((item) => (
             <li key={item.href}>
               <NavLink href={item.href}>{item.label}</NavLink>

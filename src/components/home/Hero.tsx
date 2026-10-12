@@ -29,7 +29,7 @@ export function Hero() {
       <div className="flex min-h-[calc(100svh-var(--hauteur-entete-mobile))] flex-col lg:col-span-7 lg:min-h-0">
         <div className="flex flex-1 flex-col justify-center gap-7 py-10 lg:gap-10 lg:py-0">
           <p
-            className="apparition text-[0.6875rem] tracking-[0.46em] text-glow uppercase sm:text-[0.8125rem]"
+            className="apparition text-xs tracking-[0.46em] text-glow uppercase sm:text-[0.8125rem]"
             style={delay(0)}
           >
             {siteConfig.artist} · {release.format}
@@ -37,7 +37,7 @@ export function Hero() {
           <h1
             id="titre-principal"
             className="apparition-titre origin-left font-display text-[clamp(3.5rem,19vw,4.75rem)] leading-[0.88] font-light uppercase sm:text-9xl lg:text-[10.5rem] lg:leading-[0.86]"
-            style={delay(0.3)}
+            style={delay(0)}
           >
             {/* Nom officiel en un seul bloc pour les lecteurs d'écran, sur deux lignes à l'écran. */}
             <span className="sr-only">{siteConfig.project}</span>
@@ -48,7 +48,7 @@ export function Hero() {
               Noire
             </span>
           </h1>
-          <div className="apparition flex items-center gap-4" style={delay(1.2)}>
+          <div className="apparition flex items-center gap-4" style={delay(0.8)}>
             {/* Filet décoratif masqué sous 360 px pour garder l'étiquette sur une ligne. */}
             <span aria-hidden="true" className="hidden h-px w-8 bg-glow/50 min-[360px]:block lg:w-12" />
             {releaseDate ? (
@@ -59,7 +59,7 @@ export function Hero() {
               <PlaceholderPill label="date de sortie" />
             )}
           </div>
-          <div className="apparition mt-2 flex flex-wrap gap-4" style={delay(1.5)}>
+          <div className="apparition mt-2 flex flex-wrap gap-4" style={delay(1)}>
             <ListenButton className="w-full sm:w-auto" />
             <div className="hidden lg:block">
               <DiscoverButton />
@@ -71,16 +71,17 @@ export function Hero() {
         <div
           aria-hidden="true"
           className="apparition flex flex-col items-center gap-2 pb-6 lg:hidden"
-          style={delay(2.2)}
+          style={delay(1.6)}
         >
-          <span className="text-[0.625rem] tracking-[0.4em] text-star/60 uppercase">Défiler</span>
+          <span className="text-xs tracking-[0.4em] text-star/60 uppercase">Défiler</span>
           <span className="indicateur-defilement block h-8 w-px bg-linear-to-b from-glow/70 to-transparent" />
         </div>
       </div>
 
       <CoverArt
         sizes="(min-width: 1024px) 40vw, 100vw"
-        priority
+        // Chargée tout de suite, mais sans priorité haute : sur mobile, le titre passe avant.
+        priority="eager"
         className="lg:col-span-5"
       />
 

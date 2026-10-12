@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Icône du site : étoile à quatre branches, blanc froid sur noir, halo bleu nuit. -->
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#253b85" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#253b85" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#050508"/>
+  <circle cx="32" cy="32" r="22" fill="url(#halo)"/>
+  <path d="M32 11.5 C33.2 26 38 30.8 52.5 32 C38 33.2 33.2 38 32 52.5 C30.8 38 26 33.2 11.5 32 C26 30.8 30.8 26 32 11.5 Z" fill="#f5f5f7"/>
+</svg>

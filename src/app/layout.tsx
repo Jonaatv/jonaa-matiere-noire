@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Instrument_Sans } from "next/font/google";
 
+import { MotionToggle } from "@/components/cosmos/MotionToggle";
 import { FilmGrain, Nebula } from "@/components/cosmos/Nebula";
 import { StarField } from "@/components/cosmos/StarField";
 import { WarpField } from "@/components/cosmos/WarpField";
@@ -55,10 +56,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FilmGrain />
         <SkipLink />
         <Header />
-        <main id="contenu" className="flex flex-1 flex-col">
+        {/* tabIndex -1 : le lien « Aller au contenu » y place vraiment le focus (clavier, lecteurs d'écran). */}
+        <main id="contenu" tabIndex={-1} className="flex flex-1 flex-col focus:outline-none">
           {children}
         </main>
         <Footer />
+        {/* Après le contenu : dernier arrêt au clavier, toujours visible à l'écran. */}
+        <MotionToggle />
       </body>
     </html>
   );

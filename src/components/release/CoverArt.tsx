@@ -5,8 +5,13 @@ import { siteConfig } from "@/config/site";
 type CoverArtProps = {
   /** Largeur d'affichage selon l'écran (attribut `sizes`), pour choisir la bonne version. */
   sizes: string;
-  /** Pochette visible dès le premier écran : chargée en priorité. */
-  priority?: boolean;
+  /**
+   * `high` : élément principal du premier écran, chargé en priorité (page EP).
+   * `eager` : chargée tout de suite, sans priorité haute (accueil : sous le titre
+   * sur mobile, pour ne pas concurrencer son affichage).
+   * `lazy` : chargée à l'approche de l'écran.
+   */
+  priority?: "high" | "eager" | "lazy";
   className?: string;
 };
 
@@ -17,7 +22,7 @@ type CoverArtProps = {
  * élément superposé, aucun effet. Le navigateur choisit la version WebP
  * adaptée à l'écran ; le PNG original sert de secours.
  */
-export function CoverArt({ sizes, priority = false, className = "" }: CoverArtProps) {
+export function CoverArt({ sizes, priority = "lazy", className = "" }: CoverArtProps) {
   const { cover } = release;
 
   return (
@@ -38,8 +43,8 @@ export function CoverArt({ sizes, priority = false, className = "" }: CoverArtPr
             alt={cover.alt}
             width={cover.width}
             height={cover.height}
-            loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : "auto"}
+            loading={priority === "lazy" ? "lazy" : "eager"}
+            fetchPriority={priority === "high" ? "high" : "auto"}
             decoding="async"
             className="aspect-square h-auto w-full"
           />
@@ -52,7 +57,7 @@ export function CoverArt({ sizes, priority = false, className = "" }: CoverArtPr
           className="aspect-square items-center justify-center text-center shadow-[0_40px_120px_rgb(37_59_133/0.28)]"
         />
       )}
-      <figcaption className="text-[0.6875rem] tracking-[0.24em] text-star/60 uppercase sm:text-xs">
+      <figcaption className="text-xs tracking-[0.24em] text-star/60 uppercase">
         {siteConfig.artist} — {siteConfig.project}
       </figcaption>
     </figure>
