@@ -5,8 +5,11 @@ import { release } from "@/config/release";
 /**
  * Liens d'écoute officiels, puis l'emplacement du lecteur intégré.
  * Un clic ouvre la plateforme : ce n'est pas une écoute comptabilisée.
+ *
+ * `showPlayer` : `false` masque l'emplacement du lecteur intégré (provisoire,
+ * tant qu'aucun lecteur officiel n'est branché).
  */
-export function ListenLinks() {
+export function ListenLinks({ showPlayer = true }: { showPlayer?: boolean }) {
   const { listenLinks } = release;
 
   return (
@@ -32,23 +35,25 @@ export function ListenLinks() {
       )}
 
       {/* Lecteur intégré : sera ajouté une fois la plateforme officielle connue, chargé au clic. */}
-      <div className="flex flex-col gap-4 rounded-sm border border-cosmic/60 bg-night/70 p-7 sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:p-10">
-        <div className="flex flex-col gap-2.5">
-          <p className="text-xs tracking-[0.28em] text-glow uppercase">
-            Lecteur intégré officiel · à fournir
-          </p>
-          <p className="max-w-md text-sm leading-relaxed text-star/72 sm:text-[0.9375rem]">
-            Le lecteur de la plateforme (contenu tiers) ne se chargera qu’après votre clic.
-          </p>
+      {showPlayer ? (
+        <div className="flex flex-col gap-4 rounded-sm border border-cosmic/60 bg-night/70 p-7 sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:p-10">
+          <div className="flex flex-col gap-2.5">
+            <p className="text-xs tracking-[0.28em] text-glow uppercase">
+              Lecteur intégré officiel · à fournir
+            </p>
+            <p className="max-w-md text-sm leading-relaxed text-star/72 sm:text-[0.9375rem]">
+              Le lecteur de la plateforme (contenu tiers) ne se chargera qu’après votre clic.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled
+            className="min-h-13 shrink-0 cursor-not-allowed rounded-full border border-star/30 px-7 text-xs tracking-[0.16em] whitespace-nowrap text-star/60 uppercase"
+          >
+            Charger le lecteur
+          </button>
         </div>
-        <button
-          type="button"
-          disabled
-          className="min-h-13 shrink-0 cursor-not-allowed rounded-full border border-star/30 px-7 text-xs tracking-[0.16em] whitespace-nowrap text-star/60 uppercase"
-        >
-          Charger le lecteur
-        </button>
-      </div>
+      ) : null}
     </>
   );
 }

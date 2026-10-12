@@ -48,7 +48,8 @@ export default function EpPage() {
         title="Écouter l’EP"
         intro="Liens officiels uniquement. Chaque lien s’ouvre sur la plateforme, dans un nouvel onglet."
       >
-        <ListenLinks />
+        {/* Lecteur intégré masqué provisoirement : aucun lecteur officiel n'est encore branché. */}
+        <ListenLinks showPlayer={false} />
       </Section>
 
       <Section id="clips" number="03" eyebrow="Clips" title="Clips">
