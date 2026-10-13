@@ -8,7 +8,8 @@ import {
   subscribePaused,
   subscribeReducedMotion,
 } from "@/components/cosmos/motion-preference";
-import { startPortal, type PortalController } from "@/components/portail/portal-engine";
+import { startPortal, type PortalController, type PortalForm } from "@/components/portail/portal-engine";
+import { nebuleuseForm } from "@/components/createur/formes/nebuleuse";
 import {
   SIGNATURE,
   canShareImages,
@@ -29,6 +30,10 @@ import {
 
 /** Même ciel à chaque visite : le tirage des particules part toujours de cette graine. */
 const SEED = 20261012;
+
+/** Forme propre à chaque ambiance ; sans forme, le moteur dessine l'anneau du portail. */
+const FORMS: Partial<Record<string, PortalForm>> = { nebuleuse: nebuleuseForm };
+const formOf = (ambianceId: string) => FORMS[ambianceId] ?? null;
 
 /** Hauteur maximale de l'aperçu (variable CSS, plus grande sur ordinateur). */
 const MAX_PREVIEW_HEIGHT = "var(--hauteur-apercu)";
@@ -191,6 +196,7 @@ export function CosmicCreator({ intro }: { intro: ReactNode }) {
   const calm = paused || reducedMotion;
   const calmRef = useRef(calm);
   const themeRef = useRef(theme);
+  const formRef = useRef(formOf(ambiance.id));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -199,6 +205,7 @@ export function CosmicCreator({ intro }: { intro: ReactNode }) {
     const controller = startPortal(canvas, {
       calm: calmRef.current,
       theme: themeRef.current,
+      form: formRef.current,
       seed: SEED,
     });
     controllerRef.current = controller;
@@ -231,6 +238,13 @@ export function CosmicCreator({ intro }: { intro: ReactNode }) {
     controllerRef.current?.setTheme(theme);
   }, [theme]);
 
+  useEffect(() => {
+    const form = formOf(ambiance.id);
+    if (form === formRef.current) return;
+    formRef.current = form;
+    controllerRef.current?.setForm(form);
+  }, [ambiance.id]);
+
   return (
     <div className="grid grid-cols-1 items-start gap-10 [--hauteur-apercu:min(44svh,30rem)] lg:grid-cols-12 lg:gap-x-16 lg:gap-y-12 lg:[--hauteur-apercu:min(74svh,48rem)]">
       <div className="lg:col-span-5 lg:col-start-8 lg:row-start-1">{intro}</div>
@@ -243,7 +257,7 @@ export function CosmicCreator({ intro }: { intro: ReactNode }) {
       <figure className="sticky top-0 z-10 -mx-5 flex flex-col items-center gap-3 bg-void px-5 py-3 sm:-mx-10 sm:px-10 lg:top-6 lg:col-span-7 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:mx-0 lg:gap-4 lg:bg-transparent lg:p-0">
         <div
           role="img"
-          aria-label={`Aperçu animé du portail, ambiance ${ambiance.name}, couleur ${color.name.toLowerCase()}, format ${format.name}`}
+          aria-label={`Aperçu animé de la création, ambiance ${ambiance.name}, couleur ${color.name.toLowerCase()}, format ${format.name}`}
           className="relative overflow-hidden rounded-sm shadow-[0_40px_120px_rgb(37_59_133/0.25)] ring-1 ring-cosmic/60 [container-type:size]"
           style={{
             aspectRatio: `${format.width} / ${format.height}`,

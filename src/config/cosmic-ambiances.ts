@@ -9,13 +9,17 @@
 
 import { DEFAULT_PORTAL_THEME, type PortalTheme } from "@/components/portail/portal-engine";
 
-/** Couleur dominante : les trois lumières du moteur, au format « r, g, b ». */
+/**
+ * Couleur dominante : les trois lumières du moteur, au format « r, g, b », et
+ * une couleur secondaire adaptée, utilisée par les formes (Nébuleuse…).
+ */
 export type CosmicColor = {
   id: string;
   name: string;
   electric: string;
   ice: string;
   night: string;
+  accent: string;
 };
 
 /** Palette limitée à l'univers MATIÈRE NOIRE. */
@@ -26,10 +30,36 @@ export const cosmicColors: CosmicColor[] = [
     electric: DEFAULT_PORTAL_THEME.electric,
     ice: DEFAULT_PORTAL_THEME.ice,
     night: DEFAULT_PORTAL_THEME.night,
+    // Cyan.
+    accent: DEFAULT_PORTAL_THEME.accent,
   },
-  { id: "bleu-nuit", name: "Bleu nuit", electric: "66, 92, 186", ice: "178, 194, 236", night: "48, 72, 168" },
-  { id: "violet", name: "Violet", electric: "128, 92, 255", ice: "216, 202, 255", night: "72, 44, 152" },
-  { id: "argente", name: "Argenté", electric: "142, 158, 190", ice: "234, 238, 246", night: "36, 44, 70" },
+  {
+    id: "bleu-nuit",
+    name: "Bleu nuit",
+    electric: "66, 92, 186",
+    ice: "178, 194, 236",
+    night: "48, 72, 168",
+    // Cyan profond.
+    accent: "58, 160, 222",
+  },
+  {
+    id: "violet",
+    name: "Violet",
+    electric: "128, 92, 255",
+    ice: "216, 202, 255",
+    night: "72, 44, 152",
+    // Bleu électrique.
+    accent: "86, 132, 255",
+  },
+  {
+    id: "argente",
+    name: "Argenté",
+    electric: "142, 158, 190",
+    ice: "234, 238, 246",
+    night: "36, 44, 70",
+    // Bleu glacier.
+    accent: "150, 196, 232",
+  },
 ];
 
 /** Lumière d'une ambiance (tout le thème sauf les couleurs). */
@@ -54,12 +84,13 @@ export const cosmicAmbiances: CosmicAmbiance[] = [
     light: { brightness: 1, density: 1, halo: 1, haloSize: 1, ring: 1 },
   },
   {
-    // Lumière diffuse : grand halo intense, anneau voilé, particules nombreuses et douces.
+    // Forme propre (formes/nebuleuse.ts) : nuage de poussière, sans anneau.
+    // « halo » règle le gaz lumineux, « ring » l'éclat des étoiles du nuage.
     id: "nebuleuse",
     name: "Nébuleuse",
-    description: "Bleu nuit et lumière diffuse",
-    colorId: "bleu-nuit",
-    light: { brightness: 0.9, density: 1.4, halo: 2, haloSize: 1.8, ring: 0.45 },
+    description: "Nuage de poussière bleue et cyan",
+    colorId: "bleu-electrique",
+    light: { brightness: 1, density: 1, halo: 1, haloSize: 1, ring: 1 },
   },
   {
     // Énergie : anneau intense, halo resserré.
@@ -95,6 +126,7 @@ export function buildTheme(
     electric: color.electric,
     ice: color.ice,
     night: color.night,
+    accent: color.accent,
     brightness,
     density,
   };

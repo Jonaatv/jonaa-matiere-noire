@@ -31,6 +31,8 @@ export type PortalTheme = {
   electric: string;
   ice: string;
   night: string;
+  /** Couleur secondaire « r, g, b » des formes du Cosmic Creator (le portail ne l'utilise pas). */
+  accent: string;
   /** Multiplicateur de luminosité (1 = portail actuel). */
   brightness: number;
   /** Multiplicateur du nombre de particules (1 = portail actuel). */
@@ -47,6 +49,7 @@ export const DEFAULT_PORTAL_THEME: PortalTheme = {
   electric: "79, 125, 255",
   ice: "207, 224, 255",
   night: "37, 59, 133",
+  accent: "92, 208, 255",
   brightness: 1,
   density: 1,
   halo: 1,
