@@ -102,12 +102,13 @@ export const cosmicAmbiances: CosmicAmbiance[] = [
     light: { brightness: 1, density: 1, halo: 1, haloSize: 1, ring: 1 },
   },
   {
-    // Matière noire : presque pas de halo, peu de particules, reflets argentés.
+    // Forme propre (formes/lentille.ts) : lentille gravitationnelle, arcs incomplets.
+    // « halo » règle la lueur de fond déformée, « ring » l'éclat des grands arcs.
     id: "matiere-noire",
     name: "Matière noire",
-    description: "Noir profond, reflets bleus et argentés",
+    description: "Lumière déviée, arcs bleu nuit et argentés",
     colorId: "argente",
-    light: { brightness: 0.85, density: 0.7, halo: 0.4, haloSize: 0.8, ring: 0.95 },
+    light: { brightness: 1, density: 1, halo: 1, haloSize: 1, ring: 1 },
   },
 ];
 

@@ -11,6 +11,7 @@ import {
 import { startPortal, type PortalController, type PortalForm } from "@/components/portail/portal-engine";
 import { nebuleuseForm } from "@/components/createur/formes/nebuleuse";
 import { energieForm } from "@/components/createur/formes/spirale";
+import { matiereNoireForm } from "@/components/createur/formes/lentille";
 import {
   SIGNATURE,
   canShareImages,
@@ -33,7 +34,11 @@ import {
 const SEED = 20261012;
 
 /** Forme propre à chaque ambiance ; sans forme, le moteur dessine l'anneau du portail. */
-const FORMS: Partial<Record<string, PortalForm>> = { nebuleuse: nebuleuseForm, energie: energieForm };
+const FORMS: Partial<Record<string, PortalForm>> = {
+  nebuleuse: nebuleuseForm,
+  energie: energieForm,
+  "matiere-noire": matiereNoireForm,
+};
 const formOf = (ambianceId: string) => FORMS[ambianceId] ?? null;
 
 /** Hauteur maximale de l'aperçu (variable CSS, plus grande sur ordinateur). */
