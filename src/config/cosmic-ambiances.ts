@@ -93,12 +93,13 @@ export const cosmicAmbiances: CosmicAmbiance[] = [
     light: { brightness: 1, density: 1, halo: 1, haloSize: 1, ring: 1 },
   },
   {
-    // Énergie : anneau intense, halo resserré.
+    // Forme propre (formes/spirale.ts) : spirale à trois bras autour d'un noyau lumineux.
+    // « halo » règle les lueurs des bras, « ring » l'éclat des filaments.
     id: "energie",
     name: "Énergie",
-    description: "Bleu électrique et nuances violettes",
+    description: "Spirale bleu électrique et violette",
     colorId: "violet",
-    light: { brightness: 1.15, density: 1.15, halo: 1.2, haloSize: 1, ring: 1.35 },
+    light: { brightness: 1, density: 1, halo: 1, haloSize: 1, ring: 1 },
   },
   {
     // Matière noire : presque pas de halo, peu de particules, reflets argentés.
