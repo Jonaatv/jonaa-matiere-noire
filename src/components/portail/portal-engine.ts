@@ -13,9 +13,11 @@
  * mouvement continu ; le toucher ne produit que des variations de lumière,
  * et rien n'est dessiné quand rien ne change.
  *
- * Réglages facultatifs (`theme`, `seed`) et image fixe (`snapshot`) : prévus
- * pour un futur créateur d'images. Sans réglage, le portail reste exactement
- * celui de la page /portail.
+ * Réglages facultatifs (`theme`, `seed`), image fixe (`snapshot`) et formes
+ * (`form`) : utilisés par le Cosmic Creator. Une forme remplace l'anneau et
+ * ses particules par son propre dessin ; le moteur garde tout le reste
+ * (boucle d'animation, doigt, clavier, mode calme, fond, poussière, export).
+ * Sans réglage ni forme, le portail reste exactement celui de la page /portail.
  */
 
 const TAU = Math.PI * 2;
@@ -85,6 +87,66 @@ type Inflow = { angle: number; radius: number; speed: number; size: number };
 type Wave = { age: number };
 type Flare = { x: number; y: number; age: number };
 
+/**
+ * Scène transmise à une forme, à jour à chaque image. Les dimensions sont en
+ * unités de la scène (pixels CSS) ; `pixelScale` donne la résolution réelle.
+ */
+export type PortalScene = {
+  width: number;
+  height: number;
+  /** Plus petite dimension de la scène. */
+  base: number;
+  /** Petit écran (moins de 768 px de large) : prévoir moins d'éléments. */
+  small: boolean;
+  /** Temps de l'univers, en secondes (s'arrête en mode calme). */
+  time: number;
+  calm: boolean;
+  theme: PortalTheme;
+  /** Pointeur lissé (doigt, souris ou clavier) ; `presence` : 0 à 1. */
+  pointer: { active: boolean; x: number; y: number; vx: number; vy: number; presence: number };
+  /** Énergie d'une impulsion (1 juste après, puis décroît vers 0). */
+  energy: number;
+  /** Perspective : décalage de la caméra (-1 à 1). */
+  cameraX: number;
+  cameraY: number;
+  frameDt: number;
+  /** Apparition progressive (0 à 1) : poussière, particules, halo, cœur. */
+  reveal: { dust: number; orbit: number; halo: number; core: number };
+  /** Halos de particules prêts à l'emploi (redessinés en haute résolution pour un export). */
+  sprites: { blue: HTMLCanvasElement; ice: HTMLCanvasElement };
+  /** Image fixe (export) : rien ne doit avancer pendant ce dessin. */
+  still: boolean;
+  /** Pixels réels par unité de la scène (davantage pour un export). */
+  pixelScale: number;
+  /** Poussière lointaine commune à toutes les formes (à dessiner si la forme le souhaite). */
+  drawDust(ctx: CanvasRenderingContext2D): void;
+  createSprite(core: string, edge: string, size?: number): HTMLCanvasElement;
+};
+
+/** Une forme en cours d'affichage, avec ses propres éléments. */
+export type PortalFormInstance = {
+  /** Scène créée ou redimensionnée : (re)crée les éléments de la forme. */
+  populate(scene: PortalScene): void;
+  /** Densité modifiée en direct : ajoute ou retire des éléments sans recréer les autres. */
+  adjustDensity(scene: PortalScene): void;
+  /** Fait avancer la forme (jamais appelé en mode calme). */
+  update(scene: PortalScene, dt: number): void;
+  /** Dessine la forme ; le fond est déjà peint et le contexte en mode « lighter ». */
+  render(ctx: CanvasRenderingContext2D, scene: PortalScene): void;
+  /** Appui sur le cœur de la scène ou touche Entrée. */
+  pulse?(scene: PortalScene): void;
+};
+
+/**
+ * Forme du Cosmic Creator. `create` reçoit un tirage propre à la forme :
+ * avec une graine, la disposition est toujours la même, et elle ne dépend
+ * pas des autres formes ni des particules du portail.
+ */
+export type PortalForm = {
+  id: string;
+  create(random: () => number): PortalFormInstance;
+};
+
 export type PortalOptions = {
   /** Pas de mouvement continu (réduction des animations ou pause). */
   calm: boolean;
@@ -94,6 +156,8 @@ export type PortalOptions = {
   theme?: Partial<PortalTheme>;
   /** Graine du tirage des particules : même graine, même ciel. Sans graine : tirage au hasard. */
   seed?: number;
+  /** Forme à dessiner à la place de l'anneau. Sans forme : le portail de la page /portail. */
+  form?: PortalForm | null;
 };
 
 export type PortalController = {
@@ -111,6 +175,8 @@ export type PortalController = {
   pulse(): void;
   /** Change les réglages visuels sans recharger la scène (particules recréées si la densité change). */
   setTheme(theme: Partial<PortalTheme>): void;
+  /** Change de forme (`null` : retour au portail), sans recharger la scène. */
+  setForm(form: PortalForm | null): void;
   /**
    * Dessine l'état actuel, figé, dans un autre canvas, à `pixelWidth` pixels de
    * large (même cadrage que la scène). Avec `pixelHeight`, l'image a exactement
@@ -149,6 +215,16 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 /** Rapproche `value` de `target` sans à-coup, indépendamment de la fréquence d'images. */
 const ease = (value: number, target: number, rate: number, dt: number) =>
   value + (target - value) * (1 - Math.exp(-rate * dt));
+
+/** Empreinte d'un texte (FNV-1a), pour dériver une graine propre à chaque forme. */
+function hashText(text: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index++) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
 
 /** Halo lumineux pré-dessiné, réutilisé pour chaque particule (bien moins coûteux qu'un flou). */
 function createSprite(core: string, edge: string, size = 64): HTMLCanvasElement {
@@ -224,6 +300,7 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
       explore: noop,
       pulse: noop,
       setTheme: noop,
+      setForm: noop,
       snapshot: noop,
       destroy: noop,
     };
@@ -240,6 +317,7 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
   let height = 0;
   let base = 0; // plus petite dimension
   let small = false;
+  let pixelRatio = 1;
   let orbiters: Orbiter[] = [];
   let dust: Dust[] = [];
   let inflow: Inflow[] = [];
@@ -276,6 +354,16 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
   let downY = 0;
   let downAt = 0;
 
+  // Forme du Cosmic Creator (aucune sur la page /portail).
+  let form: PortalFormInstance | null = createForm(options.form ?? null);
+  const scene = {
+    reveal: { dust: 0, orbit: 0, halo: 0, core: 0 },
+    pointer: { active: false, x: 0, y: 0, vx: 0, vy: 0, presence: 0 },
+    sprites: { blue: blueSprite, ice: iceSprite },
+    drawDust: (ctx: CanvasRenderingContext2D) => drawDust(ctx, scene.reveal.dust, scene.still),
+    createSprite,
+  } as PortalScene;
+
   function resize() {
     const rect = canvas.getBoundingClientRect();
     width = Math.max(1, rect.width);
@@ -284,6 +372,7 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     small = width < 768;
     // Résolution limitée : 1,25× sur téléphone, 1,5× au-delà.
     const ratio = Math.min(window.devicePixelRatio || 1, small ? 1.25 : 1.5);
+    pixelRatio = ratio;
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -301,6 +390,44 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
       pointerX = targetX = width / 2;
       pointerY = targetY = height / 2;
     }
+    if (form) form.populate(syncScene());
+  }
+
+  /** Crée une forme avec son propre tirage (dérivé de la graine et du nom de la forme). */
+  function createForm(next: PortalForm | null): PortalFormInstance | null {
+    if (!next) return null;
+    const seed = options.seed;
+    return next.create(seed === undefined ? Math.random : createRandom((seed ^ hashText(next.id)) >>> 0));
+  }
+
+  /** Met à jour la scène transmise à la forme. */
+  function syncScene(still = false, pixelScale = pixelRatio): PortalScene {
+    scene.width = width;
+    scene.height = height;
+    scene.base = base;
+    scene.small = small;
+    scene.time = time;
+    scene.calm = calm;
+    scene.theme = theme;
+    scene.pointer.active = hasPointer;
+    scene.pointer.x = pointerX;
+    scene.pointer.y = pointerY;
+    scene.pointer.vx = velocityX;
+    scene.pointer.vy = velocityY;
+    scene.pointer.presence = presence;
+    scene.energy = energy;
+    scene.cameraX = cameraX;
+    scene.cameraY = cameraY;
+    scene.frameDt = frameDt;
+    scene.reveal.dust = smoothstep(INTRO.dust[0], INTRO.dust[1], intro);
+    scene.reveal.orbit = smoothstep(INTRO.orbit[0], INTRO.orbit[1], intro);
+    scene.reveal.halo = smoothstep(INTRO.halo[0], INTRO.halo[1], intro);
+    scene.reveal.core = smoothstep(INTRO.portal[0], INTRO.portal[1], intro);
+    scene.sprites.blue = blueSprite;
+    scene.sprites.ice = iceSprite;
+    scene.still = still;
+    scene.pixelScale = pixelScale;
+    return scene;
   }
 
   const presenceTarget = () => (hasPointer ? (pressed ? 1 : 0.7) : 0);
@@ -368,14 +495,18 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     cameraY = ease(cameraY, cameraTargetY, 2.2, dt);
 
     if (!calm) {
-      for (const particle of orbiters) particle.angle += particle.speed * dt;
       for (const grain of dust) grain.x = (grain.x + grain.drift * dt + 1) % 1;
-      for (const particle of inflow) {
-        particle.radius -= particle.speed * dt * (0.4 + particle.radius);
-        particle.angle += dt * (0.25 / Math.max(0.15, particle.radius));
-        if (particle.radius < 0.12) {
-          particle.radius = 0.95 + random() * 0.15;
-          particle.angle = random() * TAU;
+      if (form) {
+        form.update(syncScene(), dt);
+      } else {
+        for (const particle of orbiters) particle.angle += particle.speed * dt;
+        for (const particle of inflow) {
+          particle.radius -= particle.speed * dt * (0.4 + particle.radius);
+          particle.angle += dt * (0.25 / Math.max(0.15, particle.radius));
+          if (particle.radius < 0.12) {
+            particle.radius = 0.95 + random() * 0.15;
+            particle.angle = random() * TAU;
+          }
         }
       }
     }
@@ -389,13 +520,26 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
   /**
    * Dessine la scène. `ctx` : canvas de la page, ou un autre canvas pour une
    * image fixe ; `background` : fond opaque (export) ; `still` : image figée,
-   * sans faire avancer le retour des particules.
+   * sans faire avancer le retour des particules ; `pixelScale` : résolution
+   * réelle de l'image (transmise aux formes).
    */
-  function render(ctx: CanvasRenderingContext2D = context, background = false, still = false) {
+  function render(
+    ctx: CanvasRenderingContext2D = context,
+    background = false,
+    still = false,
+    pixelScale = pixelRatio,
+  ) {
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, width, height);
     if (background) paintBackground(ctx);
+    if (form) {
+      ctx.globalCompositeOperation = "lighter";
+      form.render(ctx, syncScene(still, pixelScale));
+      ctx.globalCompositeOperation = "lighter";
+      drawTouches(ctx);
+      return;
+    }
 
     const dustAlpha = smoothstep(INTRO.dust[0], INTRO.dust[1], intro);
     const orbitAlpha = smoothstep(INTRO.orbit[0], INTRO.orbit[1], intro);
@@ -423,29 +567,7 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     ctx.globalCompositeOperation = "lighter";
 
     // Poussière lointaine : bouge peu, déplacée par la perspective.
-    if (dustAlpha > 0) {
-      for (const grain of dust) {
-        let x = grain.x * width - cameraX * shift * grain.depth * 2;
-        let y = grain.y * height - cameraY * shift * grain.depth * 2;
-        x = ((x % width) + width) % width;
-        y = ((y % height) + height) % height;
-        let alpha = grain.brightness * dustAlpha * theme.brightness;
-        if (hasPointer || presence > 0.01) {
-          const distance = Math.hypot(pointerX - x, pointerY - y);
-          alpha *= 1 + 1.4 * presence * Math.max(0, 1 - distance / influence);
-        }
-        ctx.globalAlpha = Math.min(1, alpha);
-        ctx.fillStyle = `rgb(${theme.ice})`;
-        if (still) {
-          // Image fixe en haute résolution : grains ronds plutôt que carrés agrandis.
-          ctx.beginPath();
-          ctx.arc(x + grain.size / 2, y + grain.size / 2, grain.size / 2, 0, TAU);
-          ctx.fill();
-        } else {
-          ctx.fillRect(x, y, grain.size, grain.size);
-        }
-      }
-    }
+    drawDust(ctx, dustAlpha, still);
 
     // Particules en orbite : d'abord celles derrière l'anneau.
     const follow = 1 - Math.exp(-frameDt * 5);
@@ -555,7 +677,39 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
       ctx.stroke();
     }
 
-    // Éclats là où le doigt a touché l'espace.
+    drawTouches(ctx);
+  }
+
+  /** Poussière lointaine : bouge peu, déplacée par la perspective (commune à toutes les formes). */
+  function drawDust(ctx: CanvasRenderingContext2D, dustAlpha: number, still: boolean) {
+    if (dustAlpha <= 0) return;
+    const shift = base * 0.09;
+    const influence = base * 0.5;
+    for (const grain of dust) {
+      let x = grain.x * width - cameraX * shift * grain.depth * 2;
+      let y = grain.y * height - cameraY * shift * grain.depth * 2;
+      x = ((x % width) + width) % width;
+      y = ((y % height) + height) % height;
+      let alpha = grain.brightness * dustAlpha * theme.brightness;
+      if (hasPointer || presence > 0.01) {
+        const distance = Math.hypot(pointerX - x, pointerY - y);
+        alpha *= 1 + 1.4 * presence * Math.max(0, 1 - distance / influence);
+      }
+      ctx.globalAlpha = Math.min(1, alpha);
+      ctx.fillStyle = `rgb(${theme.ice})`;
+      if (still) {
+        // Image fixe en haute résolution : grains ronds plutôt que carrés agrandis.
+        ctx.beginPath();
+        ctx.arc(x + grain.size / 2, y + grain.size / 2, grain.size / 2, 0, TAU);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, y, grain.size, grain.size);
+      }
+    }
+  }
+
+  /** Éclats là où le doigt a touché l'espace et lueur sous le doigt (communs à toutes les formes). */
+  function drawTouches(ctx: CanvasRenderingContext2D) {
     for (const flare of flares) {
       const size = base * 0.18 * (calm ? 1 : 0.6 + flare.age);
       ctx.globalAlpha = 0.55 * (1 - flare.age) ** 2;
@@ -666,6 +820,7 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     orbiters = fit(orbiters, Math.round(clamp(area / 900, 220, 480) * theme.density), (n) => createOrbiters(n, random));
     dust = fit(dust, Math.round(clamp(area / 2600, 90, 260) * theme.density), (n) => createDust(n, random));
     inflow = fit(inflow, Math.round((small ? 26 : 44) * theme.density), (n) => createInflow(n, random));
+    if (form) form.adjustDensity(syncScene());
   }
 
   /** Fond noir et bleu nuit, pour une image exportée (le portail de la page reste transparent). */
@@ -685,7 +840,9 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
 
   function pulse() {
     energy = 1;
-    if (!calm) {
+    if (!calm && form) {
+      form.pulse?.(syncScene());
+    } else if (!calm) {
       waves.push({ age: 0 });
       if (waves.length > 3) waves.shift();
       // Les particules sont repoussées vers l'extérieur, puis reviennent.
@@ -777,6 +934,11 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
       if (theme.density !== previous.density) adjustDensity();
       schedule(true);
     },
+    setForm(next) {
+      form = createForm(next);
+      if (form) form.populate(syncScene());
+      schedule(true);
+    },
     snapshot(target, pixelWidth, snapshotOptions = {}) {
       const targetContext = target.getContext("2d");
       if (!targetContext) return;
@@ -798,7 +960,7 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
         iceSprite = createSprite("rgba(255, 255, 255, 1)", `rgba(${theme.ice}, 0.45)`, size);
       }
       try {
-        render(targetContext, snapshotOptions.background ?? true, true);
+        render(targetContext, snapshotOptions.background ?? true, true, scale);
       } finally {
         blueSprite = liveBlue;
         iceSprite = liveIce;
