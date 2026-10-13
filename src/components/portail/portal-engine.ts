@@ -12,6 +12,10 @@
  * Mode calme (réduction des animations ou pause demandée) : plus aucun
  * mouvement continu ; le toucher ne produit que des variations de lumière,
  * et rien n'est dessiné quand rien ne change.
+ *
+ * Réglages facultatifs (`theme`, `seed`) et image fixe (`snapshot`) : prévus
+ * pour un futur créateur d'images. Sans réglage, le portail reste exactement
+ * celui de la page /portail.
  */
 
 const TAU = Math.PI * 2;
@@ -19,10 +23,34 @@ const TAU = Math.PI * 2;
 /** Rayon du portail : part de la plus petite dimension de la scène. */
 export const PORTAL_RATIO = 0.26;
 
-/** Palette : bleu électrique, bleu glacé, blanc discret. */
-const ELECTRIC = "79, 125, 255";
-const ICE = "207, 224, 255";
-const NIGHT = "37, 59, 133";
+/** Réglages visuels du portail. */
+export type PortalTheme = {
+  /** Couleurs au format « r, g, b » : lumière électrique, lumière glacée, halo. */
+  electric: string;
+  ice: string;
+  night: string;
+  /** Multiplicateur de luminosité (1 = portail actuel). */
+  brightness: number;
+  /** Multiplicateur du nombre de particules (1 = portail actuel). */
+  density: number;
+  /** Intensité et étendue du halo (1 = portail actuel) : plus fort et plus large = lumière diffuse. */
+  halo: number;
+  haloSize: number;
+  /** Intensité de l'anneau (1 = portail actuel). */
+  ring: number;
+};
+
+/** Réglages du portail actuel : bleu électrique, bleu glacé, halo bleu nuit. */
+export const DEFAULT_PORTAL_THEME: PortalTheme = {
+  electric: "79, 125, 255",
+  ice: "207, 224, 255",
+  night: "37, 59, 133",
+  brightness: 1,
+  density: 1,
+  halo: 1,
+  haloSize: 1,
+  ring: 1,
+};
 
 /** Durées de l'apparition (secondes). */
 const INTRO = { dust: [0.1, 1], orbit: [0.5, 1.6], halo: [0.9, 2], portal: [1.4, 2.8] } as const;
@@ -62,6 +90,10 @@ export type PortalOptions = {
   calm: boolean;
   /** Appelé quand l'apparition est terminée et l'univers interactif. */
   onReady?: () => void;
+  /** Réglages visuels ; ceux qui manquent gardent la valeur du portail actuel. */
+  theme?: Partial<PortalTheme>;
+  /** Graine du tirage des particules : même graine, même ciel. Sans graine : tirage au hasard. */
+  seed?: number;
 };
 
 export type PortalController = {
@@ -77,8 +109,35 @@ export type PortalController = {
   explore(dx: number, dy: number): void;
   /** Onde lumineuse depuis le portail. */
   pulse(): void;
+  /** Change les réglages visuels sans recharger la scène (particules recréées si la densité change). */
+  setTheme(theme: Partial<PortalTheme>): void;
+  /**
+   * Dessine l'état actuel, figé, dans un autre canvas, à `pixelWidth` pixels de
+   * large (même cadrage que la scène). Avec `pixelHeight`, l'image a exactement
+   * cette taille : la scène la remplit, centrée (rognage infime si les
+   * proportions diffèrent d'un pixel). Fond opaque par défaut, pour un export.
+   * Tout est redessiné à la taille finale : halos et poussière restent nets.
+   */
+  snapshot(
+    target: HTMLCanvasElement,
+    pixelWidth: number,
+    options?: { background?: boolean; pixelHeight?: number },
+  ): void;
   destroy(): void;
 };
+
+type Random = () => number;
+
+/** Générateur pseudo-aléatoire déterministe (mulberry32), pour une graine donnée. */
+function createRandom(seed: number): Random {
+  let state = seed;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 const smoothstep = (edge0: number, edge1: number, value: number) => {
   const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
@@ -92,8 +151,7 @@ const ease = (value: number, target: number, rate: number, dt: number) =>
   value + (target - value) * (1 - Math.exp(-rate * dt));
 
 /** Halo lumineux pré-dessiné, réutilisé pour chaque particule (bien moins coûteux qu'un flou). */
-function createSprite(core: string, edge: string): HTMLCanvasElement {
-  const size = 64;
+function createSprite(core: string, edge: string, size = 64): HTMLCanvasElement {
   const sprite = document.createElement("canvas");
   sprite.width = sprite.height = size;
   const context = sprite.getContext("2d");
@@ -107,48 +165,48 @@ function createSprite(core: string, edge: string): HTMLCanvasElement {
   return sprite;
 }
 
-function createOrbiters(count: number): Orbiter[] {
+function createOrbiters(count: number, random: Random): Orbiter[] {
   return Array.from({ length: count }, (_, index) => {
     // Deux familles : un disque incliné autour du portail, et une coquille plus diffuse.
     const disk = index % 3 !== 0;
-    const radius = disk ? 0.29 + Math.random() ** 1.8 * 0.4 : 0.3 + Math.random() * 0.5;
-    const depth = 0.3 + Math.random() * 0.7;
+    const radius = disk ? 0.29 + random() ** 1.8 * 0.4 : 0.3 + random() * 0.5;
+    const depth = 0.3 + random() * 0.7;
     return {
-      angle: Math.random() * TAU,
+      angle: random() * TAU,
       radius,
       // Plus lentes loin du portail, comme une gravitation.
-      speed: (0.05 + Math.random() * 0.05) * (0.3 / radius) ** 1.2 * (disk ? 1 : 0.6),
-      squash: disk ? 0.28 + Math.random() * 0.2 : 0.75 + Math.random() * 0.25,
-      tilt: (disk ? -0.32 : -0.8) + Math.random() * (disk ? 0.12 : 1.6),
+      speed: (0.05 + random() * 0.05) * (0.3 / radius) ** 1.2 * (disk ? 1 : 0.6),
+      squash: disk ? 0.28 + random() * 0.2 : 0.75 + random() * 0.25,
+      tilt: (disk ? -0.32 : -0.8) + random() * (disk ? 0.12 : 1.6),
       depth,
-      size: 0.6 + depth * (Math.random() < 0.08 ? 3.2 : 1.6),
-      brightness: 0.5 + Math.random() * 0.5,
-      blue: Math.random() < 0.55,
-      twinkle: 0.4 + Math.random() * 1.2,
-      phase: Math.random() * TAU,
+      size: 0.6 + depth * (random() < 0.08 ? 3.2 : 1.6),
+      brightness: 0.5 + random() * 0.5,
+      blue: random() < 0.55,
+      twinkle: 0.4 + random() * 1.2,
+      phase: random() * TAU,
       ox: 0,
       oy: 0,
     };
   });
 }
 
-function createDust(count: number): Dust[] {
+function createDust(count: number, random: Random): Dust[] {
   return Array.from({ length: count }, () => ({
-    x: Math.random(),
-    y: Math.random(),
-    depth: 0.1 + Math.random() * 0.3,
-    size: 0.5 + Math.random() * 0.9,
-    brightness: 0.15 + Math.random() * 0.45,
-    drift: (Math.random() - 0.5) * 0.004,
+    x: random(),
+    y: random(),
+    depth: 0.1 + random() * 0.3,
+    size: 0.5 + random() * 0.9,
+    brightness: 0.15 + random() * 0.45,
+    drift: (random() - 0.5) * 0.004,
   }));
 }
 
-function createInflow(count: number): Inflow[] {
+function createInflow(count: number, random: Random): Inflow[] {
   return Array.from({ length: count }, () => ({
-    angle: Math.random() * TAU,
-    radius: 0.2 + Math.random() * 0.85,
-    speed: 0.08 + Math.random() * 0.1,
-    size: 0.5 + Math.random() * 0.9,
+    angle: random() * TAU,
+    radius: 0.2 + random() * 0.85,
+    speed: 0.08 + random() * 0.1,
+    size: 0.5 + random() * 0.9,
   }));
 }
 
@@ -165,13 +223,18 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
       release: noop,
       explore: noop,
       pulse: noop,
+      setTheme: noop,
+      snapshot: noop,
       destroy: noop,
     };
   }
   const context: CanvasRenderingContext2D = maybeContext;
 
-  const blueSprite = createSprite("rgba(235, 242, 255, 1)", `rgba(${ELECTRIC}, 0.5)`);
-  const iceSprite = createSprite("rgba(255, 255, 255, 1)", `rgba(${ICE}, 0.45)`);
+  let theme: PortalTheme = { ...DEFAULT_PORTAL_THEME, ...options.theme };
+  const random: Random = options.seed === undefined ? Math.random : createRandom(options.seed);
+
+  let blueSprite = createSprite("rgba(235, 242, 255, 1)", `rgba(${theme.electric}, 0.5)`);
+  let iceSprite = createSprite("rgba(255, 255, 255, 1)", `rgba(${theme.ice}, 0.45)`);
 
   let width = 0;
   let height = 0;
@@ -224,16 +287,20 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    populate();
+    schedule(true);
+  }
 
+  /** (Re)crée les particules selon la surface de la scène et la densité choisie. */
+  function populate() {
     const area = width * height;
-    orbiters = createOrbiters(Math.round(clamp(area / 900, 220, 480)));
-    dust = createDust(Math.round(clamp(area / 2600, 90, 260)));
-    inflow = createInflow(small ? 26 : 44);
+    orbiters = createOrbiters(Math.round(clamp(area / 900, 220, 480) * theme.density), random);
+    dust = createDust(Math.round(clamp(area / 2600, 90, 260) * theme.density), random);
+    inflow = createInflow(Math.round((small ? 26 : 44) * theme.density), random);
     if (!hasPointer) {
       pointerX = targetX = width / 2;
       pointerY = targetY = height / 2;
     }
-    schedule(true);
   }
 
   const presenceTarget = () => (hasPointer ? (pressed ? 1 : 0.7) : 0);
@@ -307,8 +374,8 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
         particle.radius -= particle.speed * dt * (0.4 + particle.radius);
         particle.angle += dt * (0.25 / Math.max(0.15, particle.radius));
         if (particle.radius < 0.12) {
-          particle.radius = 0.95 + Math.random() * 0.15;
-          particle.angle = Math.random() * TAU;
+          particle.radius = 0.95 + random() * 0.15;
+          particle.angle = random() * TAU;
         }
       }
     }
@@ -319,10 +386,16 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     while (flares.length && flares[0].age > 1) flares.shift();
   }
 
-  function render() {
-    context.globalCompositeOperation = "source-over";
-    context.globalAlpha = 1;
-    context.clearRect(0, 0, width, height);
+  /**
+   * Dessine la scène. `ctx` : canvas de la page, ou un autre canvas pour une
+   * image fixe ; `background` : fond opaque (export) ; `still` : image figée,
+   * sans faire avancer le retour des particules.
+   */
+  function render(ctx: CanvasRenderingContext2D = context, background = false, still = false) {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, width, height);
+    if (background) paintBackground(ctx);
 
     const dustAlpha = smoothstep(INTRO.dust[0], INTRO.dust[1], intro);
     const orbitAlpha = smoothstep(INTRO.orbit[0], INTRO.orbit[1], intro);
@@ -338,16 +411,16 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
 
     // Halo bleu diffus.
     if (haloAlpha > 0) {
-      const halo = context.createRadialGradient(centerX, centerY, radius * 0.4, centerX, centerY, radius * 3);
-      const strength = haloAlpha * (0.34 + 0.08 * breath + 0.25 * energy);
-      halo.addColorStop(0, `rgba(${NIGHT}, ${strength})`);
-      halo.addColorStop(0.45, `rgba(${NIGHT}, ${strength * 0.45})`);
-      halo.addColorStop(1, `rgba(${NIGHT}, 0)`);
-      context.fillStyle = halo;
-      context.fillRect(0, 0, width, height);
+      const halo = ctx.createRadialGradient(centerX, centerY, radius * 0.4, centerX, centerY, radius * 3 * theme.haloSize);
+      const strength = haloAlpha * (0.34 + 0.08 * breath + 0.25 * energy) * theme.brightness * theme.halo;
+      halo.addColorStop(0, `rgba(${theme.night}, ${strength})`);
+      halo.addColorStop(0.45, `rgba(${theme.night}, ${strength * 0.45})`);
+      halo.addColorStop(1, `rgba(${theme.night}, 0)`);
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, width, height);
     }
 
-    context.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = "lighter";
 
     // Poussière lointaine : bouge peu, déplacée par la perspective.
     if (dustAlpha > 0) {
@@ -356,14 +429,21 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
         let y = grain.y * height - cameraY * shift * grain.depth * 2;
         x = ((x % width) + width) % width;
         y = ((y % height) + height) % height;
-        let alpha = grain.brightness * dustAlpha;
+        let alpha = grain.brightness * dustAlpha * theme.brightness;
         if (hasPointer || presence > 0.01) {
           const distance = Math.hypot(pointerX - x, pointerY - y);
           alpha *= 1 + 1.4 * presence * Math.max(0, 1 - distance / influence);
         }
-        context.globalAlpha = Math.min(1, alpha);
-        context.fillStyle = `rgb(${ICE})`;
-        context.fillRect(x, y, grain.size, grain.size);
+        ctx.globalAlpha = Math.min(1, alpha);
+        ctx.fillStyle = `rgb(${theme.ice})`;
+        if (still) {
+          // Image fixe en haute résolution : grains ronds plutôt que carrés agrandis.
+          ctx.beginPath();
+          ctx.arc(x + grain.size / 2, y + grain.size / 2, grain.size / 2, 0, TAU);
+          ctx.fill();
+        } else {
+          ctx.fillRect(x, y, grain.size, grain.size);
+        }
       }
     }
 
@@ -392,8 +472,10 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
           goalX = dx * 0.42 * pull + velocityX * 0.06 * pull;
           goalY = dy * 0.42 * pull + velocityY * 0.06 * pull;
         }
-        particle.ox += (goalX - particle.ox) * follow;
-        particle.oy += (goalY - particle.oy) * follow;
+        if (!still) {
+          particle.ox += (goalX - particle.ox) * follow;
+          particle.oy += (goalY - particle.oy) * follow;
+        }
         x += particle.ox;
         y += particle.oy;
       }
@@ -412,38 +494,38 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
         const distance = Math.hypot(pointerX - x, pointerY - y);
         alpha *= 1 + (calm ? 1.6 : 0.8) * presence * Math.max(0, 1 - distance / influence);
       }
-      alpha *= 1 + energy * 0.8;
+      alpha *= (1 + energy * 0.8) * theme.brightness;
       const size = particle.size * (0.8 + particle.depth * 0.6) * 5.5;
-      context.globalAlpha = Math.min(1, alpha);
-      context.drawImage(particle.blue ? blueSprite : iceSprite, x - size / 2, y - size / 2, size, size);
+      ctx.globalAlpha = Math.min(1, alpha);
+      ctx.drawImage(particle.blue ? blueSprite : iceSprite, x - size / 2, y - size / 2, size, size);
     };
 
     if (orbitAlpha > 0) for (const entry of positions) if (!entry.front) drawOrbiter(entry);
 
     // Passage sombre au centre du portail.
     if (portalAlpha > 0) {
-      context.globalCompositeOperation = "source-over";
-      const voidGradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.02);
+      ctx.globalCompositeOperation = "source-over";
+      const voidGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.02);
       voidGradient.addColorStop(0, `rgba(2, 3, 8, ${0.95 * portalAlpha})`);
       voidGradient.addColorStop(0.7, `rgba(4, 6, 16, ${0.85 * portalAlpha})`);
       voidGradient.addColorStop(1, "rgba(8, 13, 36, 0)");
-      context.globalAlpha = 1;
-      context.fillStyle = voidGradient;
-      context.beginPath();
-      context.arc(centerX, centerY, radius * 1.02, 0, TAU);
-      context.fill();
-      context.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = voidGradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 1.02, 0, TAU);
+      ctx.fill();
+      ctx.globalCompositeOperation = "lighter";
 
       // Profondeur : cercles très pâles qui s'enfoncent dans le passage.
       for (let index = 0; index < 4; index++) {
         const progress = (time * 0.12 + index / 4) % 1;
         const scale = 1 - progress * 0.85;
-        context.globalAlpha = portalAlpha * 0.16 * Math.sin(progress * Math.PI);
-        context.strokeStyle = `rgb(${ELECTRIC})`;
-        context.lineWidth = 1;
-        context.beginPath();
-        context.ellipse(centerX, centerY, radius * 0.92 * scale, radius * 0.92 * scale * (1 - Math.abs(cameraY) * 0.12), 0, 0, TAU);
-        context.stroke();
+        ctx.globalAlpha = portalAlpha * 0.16 * Math.sin(progress * Math.PI);
+        ctx.strokeStyle = `rgb(${theme.electric})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, radius * 0.92 * scale, radius * 0.92 * scale * (1 - Math.abs(cameraY) * 0.12), 0, 0, TAU);
+        ctx.stroke();
       }
 
       // Particules aspirées vers le centre.
@@ -453,11 +535,11 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
         const y = centerY + Math.sin(particle.angle) * r;
         const fade = smoothstep(0.12, 0.45, particle.radius) * (1 - smoothstep(0.9, 1.1, particle.radius));
         const size = particle.size * 3 * (0.5 + particle.radius);
-        context.globalAlpha = portalAlpha * fade * 0.7;
-        context.drawImage(blueSprite, x - size / 2, y - size / 2, size, size);
+        ctx.globalAlpha = portalAlpha * fade * 0.7 * theme.brightness;
+        ctx.drawImage(blueSprite, x - size / 2, y - size / 2, size, size);
       }
 
-      drawRing(centerX, centerY, radius, portalAlpha, breath);
+      drawRing(ctx, centerX, centerY, radius, portalAlpha, breath);
     }
 
     if (orbitAlpha > 0) for (const entry of positions) if (entry.front) drawOrbiter(entry);
@@ -465,34 +547,41 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     // Ondes lumineuses du portail.
     for (const wave of waves) {
       const progress = wave.age / 1.8;
-      context.globalAlpha = 0.45 * (1 - progress) ** 2;
-      context.strokeStyle = `rgb(${ICE})`;
-      context.lineWidth = 1.5;
-      context.beginPath();
-      context.arc(centerX, centerY, radius * (1 + progress * 1.4), 0, TAU);
-      context.stroke();
+      ctx.globalAlpha = 0.45 * (1 - progress) ** 2;
+      ctx.strokeStyle = `rgb(${theme.ice})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * (1 + progress * 1.4), 0, TAU);
+      ctx.stroke();
     }
 
     // Éclats là où le doigt a touché l'espace.
     for (const flare of flares) {
       const size = base * 0.18 * (calm ? 1 : 0.6 + flare.age);
-      context.globalAlpha = 0.55 * (1 - flare.age) ** 2;
-      context.drawImage(iceSprite, flare.x - size / 2, flare.y - size / 2, size, size);
+      ctx.globalAlpha = 0.55 * (1 - flare.age) ** 2;
+      ctx.drawImage(iceSprite, flare.x - size / 2, flare.y - size / 2, size, size);
     }
 
     // Lueur très douce sous le doigt.
     if (presence > 0.01) {
       const size = base * 0.32;
-      context.globalAlpha = 0.12 * presence;
-      context.drawImage(blueSprite, pointerX - size / 2, pointerY - size / 2, size, size);
+      ctx.globalAlpha = 0.12 * presence;
+      ctx.drawImage(blueSprite, pointerX - size / 2, pointerY - size / 2, size, size);
     }
 
-    context.globalAlpha = 1;
-    context.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
   }
 
   /** Anneau irrégulier : rayon modulé par des ondulations lentes et par la proximité du doigt. */
-  function drawRing(centerX: number, centerY: number, radius: number, alpha: number, breath: number) {
+  function drawRing(
+    ctx: CanvasRenderingContext2D,
+    centerX: number,
+    centerY: number,
+    radius: number,
+    alpha: number,
+    breath: number,
+  ) {
     const points = 150;
     const pointerAngle = Math.atan2(pointerY - centerY, pointerX - centerX);
     const pointerDistance = Math.hypot(pointerX - centerX, pointerY - centerY);
@@ -529,30 +618,30 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
     trace(1.7, inner);
 
     // Luminosité variable le long de l'anneau (dégradé conique qui tourne lentement).
-    let light: CanvasGradient | string = `rgb(${ICE})`;
-    if (typeof context.createConicGradient === "function") {
-      const conic = context.createConicGradient(time * 0.15, centerX, centerY);
-      conic.addColorStop(0, `rgb(${ICE})`);
-      conic.addColorStop(0.3, `rgb(${ELECTRIC})`);
+    let light: CanvasGradient | string = `rgb(${theme.ice})`;
+    if (typeof ctx.createConicGradient === "function") {
+      const conic = ctx.createConicGradient(time * 0.15, centerX, centerY);
+      conic.addColorStop(0, `rgb(${theme.ice})`);
+      conic.addColorStop(0.3, `rgb(${theme.electric})`);
       conic.addColorStop(0.55, "rgb(245, 248, 255)");
-      conic.addColorStop(0.8, `rgb(${ELECTRIC})`);
-      conic.addColorStop(1, `rgb(${ICE})`);
+      conic.addColorStop(0.8, `rgb(${theme.electric})`);
+      conic.addColorStop(1, `rgb(${theme.ice})`);
       light = conic;
     }
 
-    const glow = alpha * breath * (1 + 1.2 * energy);
+    const glow = alpha * breath * (1 + 1.2 * energy) * theme.brightness * theme.ring;
     const strokes: [Path2D, number, number, CanvasGradient | string][] = [
-      [main, 22, 0.05, `rgb(${ELECTRIC})`],
-      [main, 9, 0.1, `rgb(${ELECTRIC})`],
+      [main, 22, 0.05, `rgb(${theme.electric})`],
+      [main, 9, 0.1, `rgb(${theme.electric})`],
       [main, 3, 0.4, light],
       [main, 1, 0.85, "rgb(255, 255, 255)"],
       [inner, 1, 0.3, light],
     ];
     for (const [path, lineWidth, strokeAlpha, style] of strokes) {
-      context.globalAlpha = Math.min(1, strokeAlpha * glow);
-      context.lineWidth = lineWidth;
-      context.strokeStyle = style;
-      context.stroke(path);
+      ctx.globalAlpha = Math.min(1, strokeAlpha * glow);
+      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = style;
+      ctx.stroke(path);
     }
 
     // Point plus lumineux sur l'anneau, face au doigt.
@@ -561,9 +650,33 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
       const x = centerX + Math.cos(pointerAngle) * radius * scaleX;
       const y = centerY + Math.sin(pointerAngle) * radius * scaleY;
       const proximity = presence * Math.exp(-(((pointerDistance - radius) / (radius * 1.2)) ** 2));
-      context.globalAlpha = Math.min(1, 0.5 * proximity * alpha);
-      context.drawImage(iceSprite, x - size / 2, y - size / 2, size, size);
+      ctx.globalAlpha = Math.min(1, 0.5 * proximity * alpha);
+      ctx.drawImage(iceSprite, x - size / 2, y - size / 2, size, size);
     }
+  }
+
+  /**
+   * Densité modifiée en direct : on ajoute ou retire des particules sans
+   * recréer les autres, pour que le ciel ne « saute » pas.
+   */
+  function adjustDensity() {
+    const area = width * height;
+    const fit = <T,>(list: T[], count: number, create: (n: number) => T[]) =>
+      count > list.length ? list.concat(create(count - list.length)) : list.slice(0, count);
+    orbiters = fit(orbiters, Math.round(clamp(area / 900, 220, 480) * theme.density), (n) => createOrbiters(n, random));
+    dust = fit(dust, Math.round(clamp(area / 2600, 90, 260) * theme.density), (n) => createDust(n, random));
+    inflow = fit(inflow, Math.round((small ? 26 : 44) * theme.density), (n) => createInflow(n, random));
+  }
+
+  /** Fond noir et bleu nuit, pour une image exportée (le portail de la page reste transparent). */
+  function paintBackground(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = "rgb(5, 5, 8)";
+    ctx.fillRect(0, 0, width, height);
+    const glow = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.75);
+    glow.addColorStop(0, "rgba(8, 13, 36, 0.9)");
+    glow.addColorStop(1, "rgba(8, 13, 36, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
   }
 
   function isOnPortal(x: number, y: number) {
@@ -652,6 +765,45 @@ export function startPortal(canvas: HTMLCanvasElement, options: PortalOptions): 
       schedule(true);
     },
     pulse,
+    setTheme(next) {
+      const previous = theme;
+      theme = { ...theme, ...next };
+      if (theme.electric !== previous.electric) {
+        blueSprite = createSprite("rgba(235, 242, 255, 1)", `rgba(${theme.electric}, 0.5)`);
+      }
+      if (theme.ice !== previous.ice) {
+        iceSprite = createSprite("rgba(255, 255, 255, 1)", `rgba(${theme.ice}, 0.45)`);
+      }
+      if (theme.density !== previous.density) adjustDensity();
+      schedule(true);
+    },
+    snapshot(target, pixelWidth, snapshotOptions = {}) {
+      const targetContext = target.getContext("2d");
+      if (!targetContext) return;
+      const pixelHeight = snapshotOptions.pixelHeight;
+      const scale = pixelHeight ? Math.max(pixelWidth / width, pixelHeight / height) : pixelWidth / width;
+      target.width = pixelWidth;
+      target.height = pixelHeight ?? Math.round(height * scale);
+      // Scène centrée : elle couvre toute l'image.
+      const offsetX = (target.width - width * scale) / 2;
+      const offsetY = (target.height - height * scale) / 2;
+      targetContext.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
+      // Halos des particules redessinés à la taille finale (sinon ils seraient flous).
+      const liveBlue = blueSprite;
+      const liveIce = iceSprite;
+      if (scale > 1) {
+        const size = Math.min(512, 64 * Math.ceil(scale));
+        blueSprite = createSprite("rgba(235, 242, 255, 1)", `rgba(${theme.electric}, 0.5)`, size);
+        iceSprite = createSprite("rgba(255, 255, 255, 1)", `rgba(${theme.ice}, 0.45)`, size);
+      }
+      try {
+        render(targetContext, snapshotOptions.background ?? true, true);
+      } finally {
+        blueSprite = liveBlue;
+        iceSprite = liveIce;
+      }
+    },
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);
